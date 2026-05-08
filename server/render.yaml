@@ -1,0 +1,22 @@
+services:
+  - type: web
+    name: bestlink-ai-backend
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 5000
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: PRODUCTION_URL
+        value: https://bestlink-ai-backend.onrender.com
+      - key: FRONTEND_URL
+        value: https://bestlink-ai.web.app
+    disk:
+      name: uploads-data
+      mountPath: /opt/render/project/src/uploads
+      sizeGB: 1

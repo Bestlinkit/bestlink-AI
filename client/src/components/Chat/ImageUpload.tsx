@@ -67,7 +67,7 @@ export default function ImageUpload({ onUpload, attachments, onRemove }: ImageUp
               >
                 {file.mimetype?.startsWith('image/') ? (
                   <img 
-                    src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${file.path}`} 
+                    src={file.path.startsWith('http') ? file.path : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${file.path}`} 
                     alt={file.originalName}
                     className="w-full h-full object-cover"
                   />

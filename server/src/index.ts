@@ -21,7 +21,25 @@ const port = process.env.PORT || 5000;
 app.use(helmet({
   crossOriginResourcePolicy: false,
 }));
-app.use(cors());
+
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://bestlink-ai.web.app',
+  'https://bestlink-ai.firebaseapp.com',
+  process.env.FRONTEND_URL
+].filter(Boolean) as string[];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
+
 app.use(morgan('dev'));
 app.use(express.json());
 
@@ -78,11 +96,15 @@ app.post('/api/chat', async (req, res) => {
 
 // File Upload Endpoint
 app.post('/api/upload', upload.array('files'), (req, res) => {
+  const protocol = req.protocol;
+  const host = req.get('host');
+  const baseUrl = process.env.PRODUCTION_URL || `${protocol}://${host}`;
+  
   const files = req.files as Express.Multer.File[];
   const fileData = files.map(file => ({
     filename: file.filename,
     originalName: file.originalname,
-    path: `/uploads/${file.filename}`,
+    path: `${baseUrl}/uploads/${file.filename}`,
     size: file.size,
     mimetype: file.mimetype
   }));
@@ -110,7 +132,8 @@ async function start() {
   try {
     await dbService.init();
     app.listen(port, () => {
-      console.log(`Server running at http://localhost:${port}`);
+      const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
+      console.log(`Server running at ${baseUrl}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);

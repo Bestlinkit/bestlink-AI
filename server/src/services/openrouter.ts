@@ -128,7 +128,7 @@ export const openRouterService = {
     }
   },
 
-  private async executeRequest(
+  async executeRequest(
     messages: any[],
     model: string,
     options: any,

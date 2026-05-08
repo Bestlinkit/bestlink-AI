@@ -14,7 +14,8 @@ import {
   RotateCcw,
   StopCircle,
   Terminal,
-  X
+  X,
+  LayoutGrid
 } from "lucide-react";
 import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";

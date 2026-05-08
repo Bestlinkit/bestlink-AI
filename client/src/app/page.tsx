@@ -11,7 +11,7 @@ import { PanelLeftClose, PanelLeftOpen, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export default function Home() {
-  const { isSidebarOpen, toggleSidebar, currentChatId, activeAgentId, setAgent } = useAppStore();
+  const { isSidebarOpen, toggleSidebar, currentChatId, activeAgentId, setActiveAgent } = useAppStore();
   const [showSandbox, setShowSandbox] = useState(false);
 
   return (
@@ -47,7 +47,7 @@ export default function Home() {
             
             <AgentSelector 
               activeAgentId={activeAgentId} 
-              onSelect={setAgent} 
+              onSelect={setActiveAgent} 
             />
           </div>
 

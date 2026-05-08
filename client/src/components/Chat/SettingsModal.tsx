@@ -17,14 +17,12 @@ import { Settings, Shield, Cpu, Palette, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ModelSelector from './ModelSelector';
 
-export default function SettingsModal({ children }: { children: React.ReactNode }) {
+export default function SettingsModal({ children }: { children: React.ReactElement }) {
   const { theme, setTheme, model, setModel } = useAppStore();
 
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger render={children} />
       <DialogContent className="max-w-2xl bg-[#09090b] border-white/5 text-zinc-200">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold font-outfit flex items-center gap-2">

@@ -29,7 +29,7 @@ interface AppState {
   removeChat: (id: string) => void;
   setCurrentChat: (id: string) => void;
   addMessage: (chatId: string, message: Message) => void;
-  updateLastMessage: (chatId: string, content: string) => void;
+  updateLastMessage: (chatId: string, contentOrUpdater: string | ((prev: string) => string)) => void;
   toggleSidebar: () => void;
   setTheme: (theme: 'dark' | 'light') => void;
   setModel: (model: string) => void;
@@ -55,12 +55,16 @@ export const useAppStore = create<AppState>((set) => ({
       c.id === chatId ? { ...c, messages: [...c.messages, message] } : c
     )
   })),
-  updateLastMessage: (chatId, content) => set((state) => ({
+  updateLastMessage: (chatId, contentOrUpdater) => set((state) => ({
     chats: state.chats.map((c) => {
       if (c.id === chatId) {
         const messages = [...c.messages];
         if (messages.length > 0) {
-          messages[messages.length - 1].content = content;
+          const lastMessage = messages[messages.length - 1];
+          const newContent = typeof contentOrUpdater === 'function' 
+            ? (contentOrUpdater as (prev: string) => string)(lastMessage.content)
+            : contentOrUpdater;
+          messages[messages.length - 1] = { ...lastMessage, content: newContent };
         }
         return { ...c, messages };
       }

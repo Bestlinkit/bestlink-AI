@@ -1,6 +1,6 @@
 import dotenv from 'dotenv';
 import axios from 'axios';
-import { FALLBACK_ORDER } from "../../../../shared/models";
+import { FALLBACK_ORDER } from "../../../client/src/shared/models";
 
 dotenv.config();
 

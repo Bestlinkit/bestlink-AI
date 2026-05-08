@@ -94,7 +94,6 @@ export default function SandboxContainer() {
                 minimap: { enabled: false },
                 fontSize: 13,
                 fontFamily: 'JetBrains Mono, monospace',
-                backgroundColor: '#050505',
                 lineNumbers: 'on',
                 roundedSelection: false,
                 scrollBeyondLastLine: false,

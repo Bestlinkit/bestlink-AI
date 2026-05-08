@@ -1,0 +1,29 @@
+{
+  "name": "Elite SaaS Starter",
+  "type": "saas",
+  "description": "Premium multi-tenant SaaS platform with advanced analytics and team management.",
+  "pages": [
+    {
+      "name": "Landing",
+      "purpose": "Conversion focused home page with cinematic hero and bento features.",
+      "components": ["Hero", "BentoGrid", "Pricing", "FAQ", "Footer"]
+    },
+    {
+      "name": "Dashboard",
+      "purpose": "Core user experience with real-time analytics and project management.",
+      "components": ["Sidebar", "StatCards", "DataTable", "Charts", "ActivityFeed"]
+    },
+    {
+      "name": "Settings",
+      "purpose": "User and organization configuration.",
+      "components": ["ProfileTabs", "APIKeys", "BillingPortal"]
+    }
+  ],
+  "designAesthetic": "Cinematic Dark, Minimalist, Glassmorphic",
+  "techStack": {
+    "frontend": "Next.js 15 (App Router)",
+    "styling": "Tailwind CSS 4",
+    "animations": "Framer Motion + GSAP",
+    "state": "Zustand"
+  }
+}

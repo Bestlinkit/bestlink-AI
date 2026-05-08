@@ -11,13 +11,17 @@ import {
   Code, 
   Image as ImageIcon,
   Loader2,
+  RotateCcw,
   StopCircle,
-  Terminal
+  Terminal,
+  X
 } from "lucide-react";
 import MessageList from "./MessageList";
 import ModelSelector from "./ModelSelector";
-import { motion } from "framer-motion";
+import ImageUpload from "./ImageUpload";
+import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export default function ChatInterface() {
   const [input, setInput] = useState("");
@@ -25,9 +29,13 @@ export default function ChatInterface() {
   const [pipelineStage, setPipelineStage] = useState<string | null>(null);
   const [pipelineData, setPipelineData] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
+  
   const { chats, currentChatId, addMessage, updateLastMessage, model, activeAgentId } = useAppStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   const currentChat = chats.find(c => c.id === currentChatId);
   const activeAgent = AGENTS.find(a => a.id === activeAgentId) || AGENTS[1];
@@ -44,14 +52,16 @@ export default function ChatInterface() {
     setPipelineStage('ANALYZING');
     
     try {
-      const response = await fetch('http://localhost:5000/api/pipeline', {
+      const response = await fetch(`${API_URL}/api/pipeline`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt })
       });
 
+      if (!response.ok) throw new Error('Pipeline failed to initialize');
+
       const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader');
+      if (!reader) throw new Error('No reader available');
 
       const decoder = new TextDecoder();
       let assistantMessageId = Math.random().toString(36).substring(7);
@@ -85,16 +95,15 @@ export default function ChatInterface() {
                 updateLastMessage(chatId, `Project Manifest Created: ${stageData.type} with ${stageData.pages.length} pages.`);
               } else if (stage === 'STREAMING_CODE') {
                 const content = stageData.choices?.[0]?.delta?.content || "";
-                // Logic to update the last message with code stream
-                // This would be more complex in a real app to handle multi-file
                 updateLastMessage(chatId, (prev) => prev + content);
               }
             } catch (e) {}
           }
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Pipeline Error:', error);
+      toast.error(error.message || "Failed to generate project");
     } finally {
       setIsLoading(false);
       setPipelineStage(null);
@@ -108,7 +117,7 @@ export default function ChatInterface() {
       id: Math.random().toString(36).substring(7),
       role: 'user' as const,
       content: input,
-      attachments: attachments,
+      attachments: [...attachments],
       timestamp: Date.now()
     };
 
@@ -116,6 +125,7 @@ export default function ChatInterface() {
     addMessage(currentChatId, userMessage);
     setInput("");
     setAttachments([]);
+    setIsUploadOpen(false);
 
     const isPipelineRequest = prompt.toLowerCase().includes('build') || prompt.toLowerCase().includes('generate');
     if (isPipelineRequest) {
@@ -125,7 +135,6 @@ export default function ChatInterface() {
 
     setIsLoading(true);
 
-    // Add empty assistant message for streaming
     const assistantMessageId = Math.random().toString(36).substring(7);
     addMessage(currentChatId, {
       id: assistantMessageId,
@@ -142,7 +151,7 @@ export default function ChatInterface() {
         content: activeAgent.systemPrompt
       };
 
-      const response = await fetch('http://localhost:5000/api/chat', {
+      const response = await fetch(`${API_URL}/api/chat`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -153,8 +162,13 @@ export default function ChatInterface() {
         signal: abortControllerRef.current.signal
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Server error: ${response.status}`);
+      }
+
       const reader = response.body?.getReader();
-      if (!reader) throw new Error('No reader');
+      if (!reader) throw new Error('Stream reader not available');
 
       let accumulatedContent = "";
       const decoder = new TextDecoder();
@@ -176,7 +190,7 @@ export default function ChatInterface() {
               accumulatedContent += content;
               updateLastMessage(currentChatId, accumulatedContent);
             } catch (e) {
-              console.error('Error parsing chunk', e);
+              console.error('Chunk parse error', e);
             }
           }
         }
@@ -186,7 +200,8 @@ export default function ChatInterface() {
         console.log('Stream aborted');
       } else {
         console.error('Chat error:', error);
-        updateLastMessage(currentChatId, "Sorry, there was an error processing your request.");
+        toast.error(error.message || "Something went wrong. Please try again.");
+        updateLastMessage(currentChatId, "Sorry, I encountered an error while processing your request.");
       }
     } finally {
       setIsLoading(false);
@@ -200,59 +215,120 @@ export default function ChatInterface() {
     }
   };
 
+  const handleRegenerate = async () => {
+    if (isLoading || !currentChatId || !currentChat || currentChat.messages.length === 0) return;
+    
+    // Find the last user message
+    const lastUserMessage = [...currentChat.messages].reverse().find(m => m.role === 'user');
+    if (!lastUserMessage) return;
+
+    setInput(lastUserMessage.content);
+    // We'll just call handleSend with the previous input
+    // To make it feel like regenerate, we could remove the last assistant message
+    // but for now, we'll just send again.
+    setTimeout(() => handleSend(), 100);
+  };
+
   return (
-    <div className="flex flex-col h-full bg-background relative">
-      {/* Chat Header (Agent + Model Selector) */}
-      <div className="flex items-center justify-between px-8 py-3 border-b border-white/5 bg-sidebar/50 backdrop-blur-md sticky top-0 z-10">
-        <div className="flex items-center gap-4">
+    <div className="flex flex-col h-full bg-[#050505] relative">
+      {/* Premium Chat Header */}
+      <header className="flex items-center justify-between px-6 py-3 border-b border-white/5 bg-[#09090b]/80 backdrop-blur-xl sticky top-0 z-20">
+        <div className="flex items-center gap-6">
           <ModelSelector />
+          <div className="h-4 w-[1px] bg-white/10 hidden md:block" />
+          <div className="hidden md:flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                Agent: <span className="text-zinc-200">{activeAgent.name}</span>
+              </span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                Mode: <span className="text-zinc-200">Production</span>
+              </span>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-500 font-medium bg-white/5 px-2 py-1 rounded-md border border-white/5 uppercase">
-            Bestlink v2.0
-          </span>
+
+        <div className="flex items-center gap-3">
+          <div className="flex flex-col items-end mr-4 hidden sm:flex">
+            <span className="text-[9px] font-bold text-zinc-600 uppercase leading-none mb-1">
+              Project Status
+            </span>
+            <span className="text-[10px] font-medium text-blue-400 leading-none">
+              Development Active
+            </span>
+          </div>
+          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+            <LayoutGrid className="w-3.5 h-3.5" />
+            DEPLOY
+          </button>
         </div>
-      </div>
+      </header>
 
       {/* Messages */}
       <div className="flex-1 overflow-y-auto px-4 md:px-8 custom-scrollbar">
         {currentChatId ? (
-          <MessageList messages={currentChat?.messages || []} />
+          <MessageList messages={currentChat?.messages || []} isLoading={isLoading} />
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-6 max-w-2xl mx-auto px-4">
+          <div className="h-full flex flex-col items-center justify-center text-center space-y-10 max-w-4xl mx-auto px-4 pb-20">
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
-              className="w-20 h-20 rounded-3xl bg-blue-500/10 flex items-center justify-center border border-blue-500/20"
+              transition={{ duration: 0.5 }}
+              className="relative"
             >
-              <Sparkles className="w-10 h-10 text-blue-400" />
+              <div className="absolute inset-0 bg-blue-500/20 blur-[60px] rounded-full animate-pulse" />
+              <div className="relative w-24 h-24 rounded-[2rem] bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center border border-white/20 shadow-2xl">
+                <Sparkles className="w-12 h-12 text-white" />
+              </div>
             </motion.div>
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold font-outfit gradient-text">
-                How can Bestlink Digital AI help you today?
-              </h1>
-              <p className="text-zinc-500 text-sm">
-                Create premium websites, SaaS platforms, or debug your code with our elite AI engine.
-              </p>
+
+            <div className="space-y-4">
+              <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-5xl font-bold font-outfit tracking-tight text-white leading-tight"
+              >
+                What shall we build <span className="gradient-text">today?</span>
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="text-zinc-500 text-lg max-w-xl mx-auto font-medium"
+              >
+                Orchestrate elite software production with the Bestlink multi-agent engine. 
+                From SaaS platforms to complex digital architectures.
+              </motion.p>
             </div>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 w-full">
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full"
+            >
               {[
-                { icon: Code, title: "Build a React App", desc: "Create a modern dashboard with Tailwind" },
-                { icon: Sparkles, title: "Design a Landing Page", desc: "Minimalist SaaS aesthetic with animations" },
-                { icon: Terminal, title: "Debug Python API", desc: "Fix errors and optimize performance" },
-                { icon: ImageIcon, title: "UI from Screenshot", desc: "Convert images to production-ready code" }
+                { icon: Code, title: "Next.js Dashboard", desc: "Build a premium SaaS admin system", color: "text-blue-400" },
+                { icon: Sparkles, title: "Studio Landing Page", desc: "Cinematic design with GSAP animations", color: "text-purple-400" },
+                { icon: Terminal, title: "API Architecture", desc: "Robust backend logic with SQLite/Postgres", color: "text-green-400" },
+                { icon: ImageIcon, title: "UI Reconstruction", desc: "Convert screenshots to production code", color: "text-yellow-400" }
               ].map((item, i) => (
                 <button
                   key={i}
-                  className="p-4 rounded-xl border border-border bg-white/5 hover:bg-white/10 transition-all text-left group"
+                  className="p-5 rounded-2xl border border-white/5 bg-[#09090b]/50 hover:bg-white/5 hover:border-white/10 transition-all text-left group relative overflow-hidden"
                 >
-                  <item.icon className="w-5 h-5 text-zinc-400 group-hover:text-blue-400 mb-2 transition-colors" />
-                  <div className="text-sm font-medium text-zinc-300">{item.title}</div>
-                  <div className="text-xs text-zinc-500">{item.desc}</div>
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 blur-3xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <item.icon className={cn("w-6 h-6 mb-3 transition-transform group-hover:scale-110", item.color)} />
+                  <div className="text-sm font-bold text-zinc-200 mb-1">{item.title}</div>
+                  <div className="text-xs text-zinc-500 font-medium leading-relaxed">{item.desc}</div>
                 </button>
               ))}
-            </div>
+            </motion.div>
           </div>
         )}
       </div>
@@ -263,19 +339,47 @@ export default function ChatInterface() {
           "max-w-4xl mx-auto relative glass border rounded-2xl transition-all duration-300",
           isLoading ? "ring-1 ring-blue-500/50" : "focus-within:ring-1 focus-within:ring-white/20"
         )}>
-          {attachments.length > 0 && (
-            <div className="flex gap-2 p-3 border-b border-white/5 overflow-x-auto">
+          <AnimatePresence>
+            {isUploadOpen && (
+              <motion.div
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="p-4 border-b border-white/5 bg-white/5">
+                  <ImageUpload 
+                    attachments={attachments}
+                    onUpload={(files) => setAttachments(prev => [...prev, ...files])}
+                    onRemove={(index) => setAttachments(prev => prev.filter((_, i) => i !== index))}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {attachments.length > 0 && !isUploadOpen && (
+            <div className="flex gap-2 p-3 border-b border-white/5 overflow-x-auto no-scrollbar">
               {attachments.map((file, i) => (
-                <div key={i} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-xs text-zinc-400 flex items-center gap-2">
-                  <Paperclip className="w-3 h-3" />
-                  {file.name}
+                <div key={i} className="px-3 py-1.5 rounded-lg bg-white/5 border border-white/10 text-[10px] text-zinc-400 flex items-center gap-2 whitespace-nowrap">
+                  <div className="w-1.5 h-1.5 rounded-full bg-blue-500/50" />
+                  {file.originalName}
+                  <button onClick={() => setAttachments(prev => prev.filter((_, idx) => idx !== i))}>
+                    <X className="w-3 h-3 hover:text-white transition-colors" />
+                  </button>
                 </div>
               ))}
             </div>
           )}
           
           <div className="flex items-end p-2 gap-2">
-            <button className="p-2.5 hover:bg-white/5 rounded-xl transition-colors text-zinc-500 hover:text-zinc-300">
+            <button 
+              onClick={() => setIsUploadOpen(!isUploadOpen)}
+              className={cn(
+                "p-2.5 rounded-xl transition-all duration-200",
+                isUploadOpen ? "bg-blue-500/10 text-blue-400" : "hover:bg-white/5 text-zinc-500 hover:text-zinc-300"
+              )}
+            >
               <Paperclip className="w-5 h-5" />
             </button>
             
@@ -302,13 +406,24 @@ export default function ChatInterface() {
                 <StopCircle className="w-5 h-5" />
               </button>
             ) : (
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() && attachments.length === 0}
-                className="p-2.5 bg-white text-black rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:hover:scale-100"
-              >
-                <Send className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                {currentChat && currentChat.messages.length > 0 && (
+                  <button
+                    onClick={handleRegenerate}
+                    className="p-2.5 hover:bg-white/5 text-zinc-500 rounded-xl transition-all"
+                    title="Regenerate response"
+                  >
+                    <RotateCcw className="w-5 h-5" />
+                  </button>
+                )}
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() && attachments.length === 0}
+                  className="p-2.5 bg-white text-black rounded-xl transition-all hover:scale-105 active:scale-95 disabled:opacity-50 disabled:scale-100 disabled:hover:scale-100"
+                >
+                  <Send className="w-5 h-5" />
+                </button>
+              </div>
             )}
           </div>
           

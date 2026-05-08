@@ -1,76 +1,78 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Button } from "../components/Button";
-import { cn } from "@/lib/utils";
+import React from 'react';
+import { motion } from 'framer-motion';
+import { Sparkles, ChevronRight, Zap } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 interface HeroProps {
   title: string;
   subtitle: string;
-  ctaText?: string;
-  variant?: 'minimal' | 'gradient' | 'glass' | '3d';
+  ctaText: string;
+  secondaryCta?: string;
+  className?: string;
 }
 
-export const Hero = ({ title, subtitle, ctaText = "Get Started", variant = 'minimal' }: HeroProps) => {
+export const Hero = ({ title, subtitle, ctaText, secondaryCta, className }: HeroProps) => {
   return (
-    <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden py-20 px-6">
-      {/* Background Effects */}
-      {variant === 'gradient' && (
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-blue-600/20 blur-[150px] rounded-full" />
-          <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-600/20 blur-[150px] rounded-full" />
-        </div>
-      )}
-
-      {variant === 'glass' && (
-        <div className="absolute inset-0 pointer-events-none bg-[url('/grid.svg')] bg-center opacity-20" />
-      )}
-
-      <div className="container relative z-10 mx-auto text-center">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          className="max-w-4xl mx-auto"
-        >
-          <motion.h1 
-            className={cn(
-              "text-5xl md:text-8xl font-bold tracking-tight mb-8",
-              variant === 'gradient' ? "bg-clip-text text-transparent bg-gradient-to-b from-white to-white/40" : "text-white"
-            )}
-          >
-            {title}
-          </motion.h1>
-          
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.8 }}
-            className="text-lg md:text-xl text-zinc-400 mb-12 leading-relaxed"
-          >
-            {subtitle}
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4, duration: 0.5 }}
-            className="flex flex-col sm:flex-row items-center justify-center gap-4"
-          >
-            <Button variant={variant === 'gradient' ? 'gradient' : 'primary'} size="lg">
-              {ctaText}
-            </Button>
-            <Button variant="secondary" size="lg">
-              Learn More
-            </Button>
-          </motion.div>
-        </motion.div>
+    <section className={cn("relative py-24 px-6 overflow-hidden", className)}>
+      {/* Background Accents */}
+      <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full max-w-7xl pointer-events-none -z-10">
+        <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-blue-600/10 blur-[120px] rounded-full animate-pulse" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-purple-600/10 blur-[120px] rounded-full animate-pulse delay-700" />
       </div>
 
-      {/* Decorative Elements for 3D/Glass */}
-      {variant === 'glass' && (
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-5xl h-[500px] bg-white/[0.02] border border-white/5 rounded-[40px] -z-10 backdrop-blur-3xl rotate-3" />
-      )}
+      <div className="max-w-7xl mx-auto text-center space-y-8 relative">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-blue-400 text-[10px] font-bold uppercase tracking-widest"
+        >
+          <Zap className="w-3 h-3 fill-current" />
+          <span>Next-Gen Production Engine</span>
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="text-5xl md:text-7xl font-bold font-outfit tracking-tight text-white leading-tight"
+        >
+          {title.split(' ').map((word, i) => (
+            <span key={i} className={cn(i === title.split(' ').length - 1 && "gradient-text")}>
+              {word}{' '}
+            </span>
+          ))}
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto font-medium"
+        >
+          {subtitle}
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4"
+        >
+          <button className="px-8 py-4 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white font-bold transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] flex items-center gap-2 group">
+            {ctaText}
+            <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </button>
+          
+          {secondaryCta && (
+            <button className="px-8 py-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold transition-all flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              {secondaryCta}
+            </button>
+          )}
+        </motion.div>
+      </div>
     </section>
   );
 };

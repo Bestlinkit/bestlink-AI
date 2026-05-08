@@ -1,0 +1,12 @@
+{
+  "name": "SaaS Dashboard Template",
+  "type": "saas_app",
+  "pages": ["dashboard", "analytics", "settings", "profile"],
+  "modules": ["auth", "sidebar", "data-table", "charts"],
+  "design_system_ref": "bestlink-ds-v1",
+  "structure": {
+    "layout": "sidebar-main",
+    "theme": "dark",
+    "components": ["Card", "Button", "Table", "Navbar"]
+  }
+}

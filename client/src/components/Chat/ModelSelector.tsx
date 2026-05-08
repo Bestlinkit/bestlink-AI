@@ -1,6 +1,6 @@
 "use client";
 
-import { MODELS, ModelConfig } from "../../../shared/models";
+import { MODELS, ModelConfig } from "@shared/models";
 import { cn } from "@/lib/utils";
 import { 
   ChevronDown, 

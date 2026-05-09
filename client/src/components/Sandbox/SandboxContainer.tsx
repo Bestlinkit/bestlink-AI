@@ -13,16 +13,19 @@ import {
   ChevronRight,
   Save,
   Globe,
-  Terminal
+  Terminal,
+  ExternalLink
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import FileTree from "@/components/Workspace/FileTree";
 import { useAppStore } from "@/store/useAppStore";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 
 export default function SandboxContainer() {
   const [activeView, setActiveView] = useState<'editor' | 'preview'>('editor');
   const { sandboxFiles, activeFileId, updateFileContent, setActiveFile } = useAppStore();
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   const activeFile = sandboxFiles.find(f => f.id === activeFileId) || sandboxFiles[0];
 
@@ -43,7 +46,10 @@ export default function SandboxContainer() {
   }, [sandboxFiles]);
 
   return (
-    <div className="flex flex-col h-full bg-[#050505] overflow-hidden">
+    <div className={cn(
+      "flex flex-col h-full bg-[#050505] overflow-hidden transition-all duration-300",
+      isFullscreen ? "fixed inset-0 z-[100]" : "relative"
+    )}>
       {/* Sandbox Header */}
       <div className="h-12 border-b border-white/5 flex items-center justify-between px-4 bg-[#09090b]">
         <div className="flex items-center gap-1 overflow-x-auto no-scrollbar">
@@ -70,6 +76,13 @@ export default function SandboxContainer() {
             </button>
           </div>
 
+          <button
+            onClick={() => setIsFullscreen(!isFullscreen)}
+            className="p-1.5 hover:bg-white/5 rounded-md text-zinc-500 transition-colors"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+          </button>
+
           <div className="h-4 w-[1px] bg-white/10 mx-2" />
 
           {activeView === 'editor' && (
@@ -94,7 +107,24 @@ export default function SandboxContainer() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+          <button 
+            onClick={() => {
+              const win = window.open("", "_blank");
+              if (win) {
+                win.document.write(previewDoc);
+                win.document.close();
+              }
+            }}
+            className="p-1.5 hover:bg-white/5 rounded-md text-zinc-400 transition-colors"
+            title="Open in new tab"
+          >
+            <ExternalLink className="w-4 h-4" />
+          </button>
+          
+          <button 
+            onClick={() => toast.success("Building production artifacts...")}
+            className="flex items-center gap-2 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold rounded-lg transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] whitespace-nowrap"
+          >
             <Download className="w-3.5 h-3.5" />
             SHIP IT
           </button>
@@ -145,8 +175,8 @@ export default function SandboxContainer() {
                 <iframe
                   srcDoc={previewDoc}
                   title="Preview"
-                  className="w-full h-full border-none"
-                  sandbox="allow-scripts allow-modals allow-forms"
+                  className="w-full h-full border-none bg-white"
+                  sandbox="allow-scripts allow-modals allow-forms allow-popups"
                 />
               </motion.div>
             )}

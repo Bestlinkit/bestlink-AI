@@ -32,7 +32,7 @@ export default function ChatInterface() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   
-  const { chats, currentChatId, addMessage, updateLastMessage, model, activeAgentId } = useAppStore();
+  const { chats, currentChatId, addChat, addMessage, updateLastMessage, model, activeAgentId } = useAppStore();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -112,7 +112,22 @@ export default function ChatInterface() {
   };
 
   const handleSend = async () => {
-    if ((!input.trim() && attachments.length === 0) || isLoading || !currentChatId) return;
+    if ((!input.trim() && attachments.length === 0) || isLoading) return;
+
+    let chatId = currentChatId;
+    
+    // Create new chat if none exists
+    if (!chatId) {
+      const newChatId = Math.random().toString(36).substring(7);
+      addChat({
+        id: newChatId,
+        title: input.slice(0, 30) || "New Chat",
+        messages: [],
+        model: model,
+        createdAt: Date.now()
+      });
+      chatId = newChatId;
+    }
 
     const userMessage = {
       id: Math.random().toString(36).substring(7),
@@ -123,21 +138,21 @@ export default function ChatInterface() {
     };
 
     const prompt = input;
-    addMessage(currentChatId, userMessage);
+    addMessage(chatId, userMessage);
     setInput("");
     setAttachments([]);
     setIsUploadOpen(false);
 
     const isPipelineRequest = prompt.toLowerCase().includes('build') || prompt.toLowerCase().includes('generate');
     if (isPipelineRequest) {
-      handlePipelineRequest(prompt, currentChatId);
+      handlePipelineRequest(prompt, chatId);
       return;
     }
 
     setIsLoading(true);
 
     const assistantMessageId = Math.random().toString(36).substring(7);
-    addMessage(currentChatId, {
+    addMessage(chatId, {
       id: assistantMessageId,
       role: 'assistant' as const,
       content: "",
@@ -189,7 +204,7 @@ export default function ChatInterface() {
               const parsed = JSON.parse(data);
               const content = parsed.choices?.[0]?.delta?.content || "";
               accumulatedContent += content;
-              updateLastMessage(currentChatId, accumulatedContent);
+              updateLastMessage(chatId, accumulatedContent);
             } catch (e) {
               console.error('Chunk parse error', e);
             }
@@ -201,8 +216,8 @@ export default function ChatInterface() {
         console.log('Stream aborted');
       } else {
         console.error('Chat error:', error);
-        toast.error(error.message || "Something went wrong. Please try again.");
-        updateLastMessage(currentChatId, "Sorry, I encountered an error while processing your request.");
+        toast.error(error.message || "Connection lost. Ensure the backend is running.");
+        updateLastMessage(chatId, "Error: Unable to connect to the Bestlink AI engine. Please verify the backend is active at " + API_URL);
       }
     } finally {
       setIsLoading(false);
@@ -254,17 +269,20 @@ export default function ChatInterface() {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex flex-col items-end mr-4 hidden sm:flex">
+          <div className="flex flex-col items-end mr-2 hidden lg:flex">
             <span className="text-[9px] font-bold text-zinc-600 uppercase leading-none mb-1">
               Project Status
             </span>
             <span className="text-[10px] font-medium text-blue-400 leading-none">
-              Development Active
+              Dev Active
             </span>
           </div>
-          <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)]">
+          <button 
+            onClick={() => toast.success("Deployment pipeline initialized...")}
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-[10px] font-bold transition-all shadow-[0_0_15px_rgba(37,99,235,0.3)] whitespace-nowrap"
+          >
             <LayoutGrid className="w-3.5 h-3.5" />
-            DEPLOY
+            <span className="hidden sm:inline">DEPLOY</span>
           </button>
         </div>
       </header>

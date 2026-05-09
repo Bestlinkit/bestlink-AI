@@ -68,10 +68,10 @@ export default function Home() {
         </header>
 
         {/* Content Split */}
-        <div className="flex-1 flex overflow-hidden">
+        <div className="flex-1 flex overflow-hidden relative">
           <div className={cn(
-            "flex-1 flex flex-col transition-all duration-300",
-            showSandbox ? "w-1/2" : "w-full"
+            "h-full flex flex-col transition-all duration-500 ease-in-out",
+            showSandbox ? "w-full lg:w-1/2" : "w-full"
           )}>
             <ChatInterface />
           </div>
@@ -79,11 +79,11 @@ export default function Home() {
           <AnimatePresence>
             {showSandbox && (
               <motion.div
-                initial={{ x: '100%' }}
-                animate={{ x: 0 }}
-                exit={{ x: '100%' }}
-                transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                className="w-1/2 border-l border-border bg-black relative"
+                initial={{ x: '100%', opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0 }}
+                transition={{ type: 'spring', damping: 28, stiffness: 200 }}
+                className="absolute inset-y-0 right-0 w-full lg:w-1/2 border-l border-white/5 bg-black z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
               >
                 <SandboxContainer />
               </motion.div>

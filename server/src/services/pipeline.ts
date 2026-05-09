@@ -1,7 +1,9 @@
 import { CodeBuilder } from '../agents/CodeBuilder';
+import { Planner } from '../agents/Planner';
 
 export enum AgentModels {
-  BUILDER = 'deepseek/deepseek-chat',
+  PLANNER = 'deepseek/deepseek-chat',
+  BUILDER = 'google/gemini-2.0-flash-001',
   FALLBACK = 'qwen/qwen-2.5-coder-32b-instruct'
 }
 
@@ -30,33 +32,47 @@ export const pipelineService = {
 
     const heartbeat = setInterval(() => {
       onProgress('[KEEP-ALIVE]');
-    }, 3000);
+    }, 5000);
 
+    const planner = new Planner();
     const builder = new CodeBuilder();
     let finalStatus = 'failed';
     
     const globalTimeout = setTimeout(() => {
-      onProgress('EXECUTION_ERROR', { message: 'Maximum execution time exceeded (120s). Pipeline aborted.' });
+      onProgress('EXECUTION_ERROR', { message: 'Maximum execution time exceeded. Pipeline aborted.' });
       activeExecutions.delete(sessionId);
-    }, 120000);
+    }, 180000);
 
     try {
       onProgress('BUILD_START', { message: 'Initializing high-speed production studio...' });
 
-      // Simulated streaming feedback for UX while the single LLM request runs
-      setTimeout(() => onProgress('PLANNING_PROJECT', { message: 'Planning website structure...' }), 1500);
-      setTimeout(() => onProgress('GENERATING_FILES', { message: 'Generating responsive components...' }), 6000);
-      setTimeout(() => onProgress('VALIDATING_OUTPUT', { message: 'Applying premium UI/UX styles...' }), 12000);
-      setTimeout(() => onProgress('FINALIZING_PROJECT', { message: 'Finalizing project files...' }), 18000);
+      // STEP 1: Planning
+      onProgress('PLANNING_PROJECT', { message: 'Strategizing architecture and design system...' });
+      const plan = await planner.plan(prompt);
+      onProgress('SELECTING_TEMPLATE', { 
+        message: `Plan finalized: ${plan.title}`,
+        plan 
+      });
 
-      // Single-pass generation
-      const codebasePayload = await withTimeout(builder.build(prompt, AgentModels.BUILDER), 90000, 'Building');
+      // STEP 2: Building
+      onProgress('GENERATING_FILES', { message: 'Generating premium responsive components...' });
+      
+      const buildPrompt = `Build this project:
+      TITLE: ${plan.title}
+      TYPE: ${plan.type}
+      SECTIONS: ${plan.architecture.sections.join(', ')}
+      DESIGN: ${plan.design.colorSystem} palette, ${plan.design.typography} typography, ${plan.design.aesthetic} aesthetic.
+      TECH: ${plan.technical.framework} with ${plan.technical.libraries.join(', ')}.
+      
+      ORIGINAL USER REQUEST: "${prompt}"`;
+
+      const codebasePayload = await withTimeout(builder.build(buildPrompt, AgentModels.BUILDER), 120000, 'Building');
       
       if (codebasePayload.error) {
         throw new Error(codebasePayload.error);
       }
       
-      onProgress('FINALIZING_PROJECT', { message: 'Rendering preview...' });
+      onProgress('FINALIZING_PROJECT', { message: 'Assembling Virtual File System...' });
       
       finalStatus = 'success';
       onProgress('COMPLETED_PROJECT', { 
@@ -77,7 +93,7 @@ export const pipelineService = {
       clearTimeout(globalTimeout);
       activeExecutions.delete(sessionId);
       
-      onProgress('COMPLETE', { 
+      onProgress('COMPLETED', { 
         status: finalStatus,
         message: 'Pipeline execution finalized.' 
       });

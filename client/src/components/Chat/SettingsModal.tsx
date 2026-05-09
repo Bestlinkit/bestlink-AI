@@ -13,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useAppStore } from '@/store/useAppStore';
-import { Settings, Shield, Cpu, Palette, Globe } from 'lucide-react';
+import { Settings, Shield, Cpu, Palette, Globe, Zap, X, Brain } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ModelSelector from './ModelSelector';
 
@@ -23,96 +23,114 @@ export default function SettingsModal({ children }: { children: React.ReactEleme
   return (
     <Dialog>
       <DialogTrigger render={children} />
-      <DialogContent className="max-w-2xl bg-[#09090b]/95 backdrop-blur-2xl border-white/5 text-zinc-200 shadow-2xl p-0 overflow-hidden rounded-[2rem]">
-        <div className="p-8 pb-4">
+      <DialogContent className="max-w-2xl bg-[#050505] border-white/5 text-zinc-200 shadow-[0_0_80px_rgba(0,0,0,0.8)] p-0 overflow-hidden rounded-[2.5rem] border backdrop-blur-3xl">
+        <div className="absolute inset-0 bg-blue-500/5 blur-[100px] pointer-events-none" />
+        
+        <div className="relative p-10 pb-6">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold font-outfit flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
-                <Settings className="w-5 h-5 text-blue-500" />
+            <div className="flex items-center gap-5">
+              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center border border-white/10 shadow-2xl">
+                <Settings className="w-7 h-7 text-white" />
               </div>
-              System Configuration
-            </DialogTitle>
-            <DialogDescription className="text-zinc-500 text-xs mt-1.5 ml-[52px]">
-              Manage your AI intelligence, workspace preferences, and production settings.
-            </DialogDescription>
+              <div>
+                <DialogTitle className="text-3xl font-bold font-outfit tracking-tighter text-white">
+                  System Settings
+                </DialogTitle>
+                <DialogDescription className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest mt-1">
+                  Orchestration & Infrastructure Control
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
         </div>
 
-        <Tabs defaultValue="general" className="px-8 pb-8">
-          <TabsList className="bg-white/[0.03] border border-white/5 w-full justify-start p-1 h-auto gap-1 rounded-2xl">
-            <TabsTrigger value="general" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Globe className="w-3.5 h-3.5" />
-              General
-            </TabsTrigger>
-            <TabsTrigger value="intelligence" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Cpu className="w-3.5 h-3.5" />
-              Intelligence
-            </TabsTrigger>
-            <TabsTrigger value="appearance" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Palette className="w-3.5 h-3.5" />
-              Appearance
-            </TabsTrigger>
-            <TabsTrigger value="security" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
-              <Shield className="w-3.5 h-3.5" />
-              Security
-            </TabsTrigger>
+        <Tabs defaultValue="intelligence" className="relative px-10 pb-10">
+          <TabsList className="bg-white/5 border border-white/5 w-full justify-start p-1.5 h-auto gap-1.5 rounded-2xl mb-8">
+            {[
+              { id: 'intelligence', icon: Cpu, label: 'Intelligence' },
+              { id: 'general', icon: Globe, label: 'Workspace' },
+              { id: 'appearance', icon: Palette, label: 'Aesthetics' },
+              { id: 'security', icon: Shield, label: 'Security' }
+            ].map((tab) => (
+              <TabsTrigger 
+                key={tab.id}
+                value={tab.id} 
+                className="flex-1 text-[10px] font-bold uppercase tracking-widest py-3 gap-2 rounded-xl data-[state=active]:bg-white data-[state=active]:text-black data-[state=active]:shadow-2xl transition-all"
+              >
+                <tab.icon className="w-3.5 h-3.5" />
+                {tab.label}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
-          <TabsContent value="general" className="mt-6 space-y-6">
-            <div className="space-y-4">
-              <div className="grid gap-2.5">
-                <Label htmlFor="workspace" className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] ml-1">Workspace Name</Label>
-                <Input id="workspace" defaultValue="Bestlink Production" className="bg-white/[0.02] border-white/10 h-11 rounded-xl px-4 focus:ring-2 focus:ring-blue-500/20 transition-all" />
-              </div>
-              <div className="grid gap-2.5">
-                <Label htmlFor="base-url" className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] ml-1">API Endpoint</Label>
-                <Input id="base-url" defaultValue={process.env.NEXT_PUBLIC_API_URL || ""} className="bg-white/[0.02] border-white/10 h-11 rounded-xl px-4 font-mono text-[11px] text-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all" />
-              </div>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="intelligence" className="mt-6 space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5">
+          <TabsContent value="intelligence" className="mt-0 space-y-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="p-6 rounded-3xl bg-white/[0.03] border border-white/5 space-y-6">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-bold">Model Engine</p>
-                  <p className="text-[10px] text-zinc-500">Select the primary LLM for project generation.</p>
+                  <p className="text-sm font-bold text-white">Active Intelligence Matrix</p>
+                  <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-widest mt-1">Primary Generation Engine</p>
                 </div>
                 <ModelSelector />
               </div>
-              <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
-                <p className="text-[10px] font-bold text-blue-400 uppercase mb-2">Smart Routing</p>
-                <p className="text-xs text-zinc-400 leading-relaxed">
-                  The system automatically routes complex reasoning tasks to DeepSeek R1 and UI tasks to Qwen 72B for optimal results.
-                </p>
+              <div className="h-[1px] bg-white/5" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-4 rounded-2xl bg-blue-500/5 border border-blue-500/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Zap className="w-3 h-3 text-blue-400" />
+                    <span className="text-[9px] font-bold text-blue-400 uppercase tracking-widest">Auto-Routing</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 leading-relaxed">
+                    Planner uses DeepSeek Chat for strategy, while Builder utilizes Qwen/Gemini for UI.
+                  </p>
+                </div>
+                <div className="p-4 rounded-2xl bg-purple-500/5 border border-purple-500/10">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Brain className="w-3 h-3 text-purple-400" />
+                    <span className="text-[9px] font-bold text-purple-400 uppercase tracking-widest">Reasoning Mode</span>
+                  </div>
+                  <p className="text-[10px] text-zinc-400 leading-relaxed">
+                    Advanced logic enabled for complex architecture planning.
+                  </p>
+                </div>
               </div>
             </div>
           </TabsContent>
 
-          <TabsContent value="appearance" className="mt-6 space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <button 
-                onClick={() => setTheme('dark')}
-                className={cn(
-                  "p-6 rounded-2xl border transition-all text-left",
-                  theme === 'dark' ? "bg-blue-600/10 border-blue-600" : "bg-white/5 border-white/5 hover:bg-white/10"
-                )}
-              >
-                <div className="w-10 h-10 rounded-full bg-zinc-900 border border-white/10 mb-4" />
-                <p className="font-bold text-sm">Deep Dark</p>
-                <p className="text-[10px] text-zinc-500">Cinematic production theme.</p>
-              </button>
-              <button 
-                onClick={() => setTheme('light')}
-                className={cn(
-                  "p-6 rounded-2xl border transition-all text-left",
-                  theme === 'light' ? "bg-blue-600/10 border-blue-600" : "bg-white/5 border-white/5 hover:bg-white/10"
-                )}
-              >
-                <div className="w-10 h-10 rounded-full bg-zinc-100 border border-black/10 mb-4" />
-                <p className="font-bold text-sm">Minimal Light</p>
-                <p className="text-[10px] text-zinc-500">Clean engineering theme.</p>
-              </button>
+          <TabsContent value="general" className="mt-0 space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="grid gap-6 p-6 rounded-3xl bg-white/[0.03] border border-white/5">
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Workspace ID</Label>
+                <Input defaultValue="BESTLINK_STUDIO_PROD" className="bg-black/40 border-white/5 h-12 rounded-2xl px-5 text-sm font-medium focus:border-white/20 transition-all" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest ml-1">Production Endpoint</Label>
+                <Input defaultValue={process.env.NEXT_PUBLIC_API_URL || "https://api.bestlink.ai"} className="bg-black/40 border-white/5 h-12 rounded-2xl px-5 text-sm font-mono text-blue-400 focus:border-white/20 transition-all" />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="appearance" className="mt-0 animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <div className="grid grid-cols-2 gap-6">
+              {[
+                { id: 'dark', title: 'Deep Dark', desc: 'Cinematic production', color: 'bg-zinc-950' },
+                { id: 'light', title: 'Minimal', desc: 'Clean engineering', color: 'bg-zinc-100' }
+              ].map((t) => (
+                <button 
+                  key={t.id}
+                  onClick={() => setTheme(t.id as any)}
+                  className={cn(
+                    "p-6 rounded-[2rem] border transition-all text-left relative overflow-hidden group",
+                    theme === t.id ? "bg-white/10 border-white/20" : "bg-white/[0.02] border-white/5 hover:border-white/10"
+                  )}
+                >
+                  <div className={cn("w-12 h-12 rounded-full border border-white/10 mb-6 transition-transform group-hover:scale-110", t.color)} />
+                  <p className="font-bold text-sm text-white mb-1">{t.title}</p>
+                  <p className="text-[10px] text-zinc-500 font-medium uppercase tracking-tighter">{t.desc}</p>
+                  {theme === t.id && (
+                    <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]" />
+                  )}
+                </button>
+              ))}
             </div>
           </TabsContent>
         </Tabs>

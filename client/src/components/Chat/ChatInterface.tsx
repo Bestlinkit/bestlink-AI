@@ -29,10 +29,11 @@ import { ChevronDown, ChevronUp, Activity, Box, Database } from "lucide-react";
 export default function ChatInterface() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const [pipelineStage, setPipelineStage] = useState<string | null>(null);
+  const [pipelineStage, setPipelineStage] = useState<PipelineStage | null>(null);
   const [pipelineData, setPipelineData] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isInsightsOpen, setIsInsightsOpen] = useState(true);
   
   const { 
     workspaces, 
@@ -76,6 +77,7 @@ export default function ChatInterface() {
     setIsLoading(true);
     setPipelineStage('BUILD_START');
     
+    let watchdog: NodeJS.Timeout | undefined = undefined;
     try {
       const response = await fetch(`${API_URL}/api/pipeline`, {
         method: 'POST',
@@ -91,7 +93,6 @@ export default function ChatInterface() {
       let accumulatedCode = "";
       let buffer = "";
       
-      let watchdog: NodeJS.Timeout;
       const resetWatchdog = () => {
         if (watchdog) clearTimeout(watchdog);
         watchdog = setTimeout(() => {
@@ -134,7 +135,7 @@ export default function ChatInterface() {
                 throw new Error(data.message || 'AI Engine Failure');
               }
 
-              setPipelineStage(stage);
+              setPipelineStage(stage as PipelineStage);
               if (data?.message) setPipelineMessage(data.message);
               
               if (stage === 'SELECTING_TEMPLATE' && data.plan) {

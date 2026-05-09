@@ -11,7 +11,7 @@ export type PipelineStage =
   | 'VALIDATING_OUTPUT'
   | 'FINALIZING_PROJECT'
   | 'COMPLETED_PROJECT'
-  | 'COMPLETE'
+  | 'COMPLETED'
   | 'EXECUTION_ERROR'
   | '[KEEP-ALIVE]';
 

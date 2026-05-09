@@ -44,6 +44,8 @@ interface AppState {
   setTheme: (theme: 'dark' | 'light') => void;
   isSandboxOpen: boolean;
   setSandboxOpen: (open: boolean) => void;
+  model: string;
+  setModel: (model: string) => void;
   
   // Workspace State
   workspaces: Workspace[];
@@ -85,6 +87,8 @@ export const useAppStore = create<AppState>()(
       setTheme: (theme) => set({ theme }),
       isSandboxOpen: false,
       setSandboxOpen: (open) => set({ isSandboxOpen: open }),
+      model: "openrouter/free",
+      setModel: (model) => set({ model }),
 
       // Workspace Initial State
       workspaces: [],

@@ -12,8 +12,8 @@ import { cn } from "@/lib/utils";
 
 import { 
   Panel, 
-  PanelGroup, 
-  PanelResizeHandle 
+  Group as PanelGroup, 
+  Separator as PanelResizeHandle 
 } from "react-resizable-panels";
 
 export default function Home() {
@@ -98,7 +98,7 @@ export default function Home() {
 
         {/* Content Split using Resizable Panels */}
         <div className="flex-1 flex overflow-hidden relative">
-          <PanelGroup direction="horizontal">
+          <PanelGroup orientation="horizontal">
             <Panel defaultSize={50} minSize={30}>
               <div className="h-full">
                 <ChatInterface />

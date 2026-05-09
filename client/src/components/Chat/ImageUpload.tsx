@@ -24,7 +24,7 @@ export default function ImageUpload({ onUpload, attachments, onRemove }: ImageUp
     });
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}/api/upload`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/api/upload`, {
         method: 'POST',
         body: formData,
       });
@@ -67,7 +67,7 @@ export default function ImageUpload({ onUpload, attachments, onRemove }: ImageUp
               >
                 {file.mimetype?.startsWith('image/') ? (
                   <img 
-                    src={file.path.startsWith('http') ? file.path : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000'}${file.path}`} 
+                    src={file.path.startsWith('http') ? file.path : `${process.env.NEXT_PUBLIC_API_URL || ''}${file.path}`} 
                     alt={file.originalName}
                     className="w-full h-full object-cover"
                   />

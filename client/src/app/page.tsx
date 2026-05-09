@@ -10,19 +10,45 @@ import { AnimatePresence, motion } from "framer-motion";
 import { PanelLeftClose, PanelLeftOpen, Terminal } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+import { 
+  Panel, 
+  PanelGroup, 
+  PanelResizeHandle 
+} from "react-resizable-panels";
+
 export default function Home() {
-  const { isSidebarOpen, toggleSidebar, currentChatId, activeAgentId, setActiveAgent } = useAppStore();
-  const [showSandbox, setShowSandbox] = useState(false);
+  const { 
+    isSidebarOpen, 
+    toggleSidebar, 
+    activeAgentId, 
+    setActiveAgent,
+    workspaces,
+    activeWorkspaceId,
+    createWorkspace,
+    setActiveWorkspace,
+    isSandboxOpen,
+    setSandboxOpen
+  } = useAppStore();
+
+  // Initialize workspace if none exists
+  useEffect(() => {
+    if (workspaces.length === 0) {
+      const id = createWorkspace("Default Project");
+      setActiveWorkspace(id);
+    } else if (!activeWorkspaceId) {
+      setActiveWorkspace(workspaces[0].id);
+    }
+  }, [workspaces, activeWorkspaceId, createWorkspace, setActiveWorkspace]);
 
   return (
-    <main className="flex w-full h-screen overflow-hidden">
+    <main className="flex w-full h-screen overflow-hidden bg-[#050505] text-zinc-200">
       {/* Sidebar */}
       <Sidebar />
 
       {/* Main Content Area */}
       <div className="flex flex-col flex-1 relative min-w-0">
         {/* Header/Controls */}
-        <header className="h-14 border-b border-border flex items-center justify-between px-4 glass-dark z-20">
+        <header className="h-14 border-b border-white/5 flex items-center justify-between px-4 bg-[#09090b]/80 backdrop-blur-xl z-30">
           <div className="flex items-center gap-4">
             <button
               onClick={toggleSidebar}
@@ -35,60 +61,63 @@ export default function Home() {
               )}
             </button>
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium text-zinc-300 font-outfit uppercase tracking-wider">
-                Bestlink Digital AI
+              <span className="text-sm font-bold text-white font-outfit uppercase tracking-wider">
+                Bestlink
               </span>
-              <span className="text-[10px] bg-blue-500/10 text-blue-400 border border-blue-500/20 px-1.5 py-0.5 rounded-full uppercase font-bold">
-                PRO
+              <div className="h-4 w-[1px] bg-white/10" />
+              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                Production Studio
               </span>
             </div>
             
-            <div className="h-6 w-[1px] bg-white/10 mx-2" />
+            <div className="h-6 w-[1px] bg-white/10 mx-2 hidden md:block" />
             
-            <AgentSelector 
-              activeAgentId={activeAgentId} 
-              onSelect={setActiveAgent} 
-            />
+            <div className="hidden lg:block">
+              <AgentSelector 
+                activeAgentId={activeAgentId} 
+                onSelect={setActiveAgent} 
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-2">
             <button
-              onClick={() => setShowSandbox(!showSandbox)}
+              onClick={() => setSandboxOpen(!isSandboxOpen)}
               className={cn(
-                "flex items-center gap-2 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-                showSandbox 
-                  ? "bg-blue-500/10 text-blue-400 border border-blue-500/20" 
-                  : "hover:bg-white/5 text-zinc-400"
+                "flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all border",
+                isSandboxOpen 
+                  ? "bg-blue-600/10 text-blue-400 border-blue-500/30 shadow-[0_0_15px_rgba(37,99,235,0.1)]" 
+                  : "hover:bg-white/5 text-zinc-500 border-transparent"
               )}
             >
-              <Terminal className="w-4 h-4" />
-              {showSandbox ? "Hide Sandbox" : "Show Sandbox"}
+              <Terminal className="w-3.5 h-3.5" />
+              {isSandboxOpen ? "Hide Sandbox" : "Show Sandbox"}
             </button>
           </div>
         </header>
 
-        {/* Content Split */}
+        {/* Content Split using Resizable Panels */}
         <div className="flex-1 flex overflow-hidden relative">
-          <div className={cn(
-            "h-full flex flex-col transition-all duration-500 ease-in-out",
-            showSandbox ? "w-full lg:w-1/2" : "w-full"
-          )}>
-            <ChatInterface />
-          </div>
-
-          <AnimatePresence>
-            {showSandbox && (
-              <motion.div
-                initial={{ x: '100%', opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                exit={{ x: '100%', opacity: 0 }}
-                transition={{ type: 'spring', damping: 28, stiffness: 200 }}
-                className="absolute inset-y-0 right-0 w-full lg:w-1/2 border-l border-white/5 bg-black z-10 shadow-[-20px_0_50px_rgba(0,0,0,0.5)]"
-              >
-                <SandboxContainer />
-              </motion.div>
+          <PanelGroup direction="horizontal">
+            <Panel defaultSize={50} minSize={30}>
+              <div className="h-full">
+                <ChatInterface />
+              </div>
+            </Panel>
+            
+            {isSandboxOpen && (
+              <>
+                <PanelResizeHandle className="w-1.5 bg-transparent hover:bg-blue-600/20 transition-colors relative">
+                  <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[1px] bg-white/5" />
+                </PanelResizeHandle>
+                <Panel defaultSize={50} minSize={30}>
+                  <div className="h-full border-l border-white/5">
+                    <SandboxContainer />
+                  </div>
+                </Panel>
+              </>
             )}
-          </AnimatePresence>
+          </PanelGroup>
         </div>
       </div>
     </main>

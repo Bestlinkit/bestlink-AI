@@ -66,7 +66,7 @@ export default function SettingsModal({ children }: { children: React.ReactEleme
               </div>
               <div className="grid gap-2.5">
                 <Label htmlFor="base-url" className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] ml-1">API Endpoint</Label>
-                <Input id="base-url" defaultValue={process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"} className="bg-white/[0.02] border-white/10 h-11 rounded-xl px-4 font-mono text-[11px] text-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all" />
+                <Input id="base-url" defaultValue={process.env.NEXT_PUBLIC_API_URL || ""} className="bg-white/[0.02] border-white/10 h-11 rounded-xl px-4 font-mono text-[11px] text-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all" />
               </div>
             </div>
           </TabsContent>

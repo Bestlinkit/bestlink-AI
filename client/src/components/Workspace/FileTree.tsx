@@ -16,7 +16,10 @@ import { cn } from "@/lib/utils";
 import { useAppStore } from "@/store/useAppStore";
 
 export default function FileTree() {
-  const { sandboxFiles, activeFileId, setActiveFile } = useAppStore();
+  const { workspaces, activeWorkspaceId, setActiveFile } = useAppStore();
+  const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
+  const sandboxFiles = activeWorkspace?.sandboxFiles || [];
+  const activeFileId = activeWorkspace?.activeFileId || null;
 
   return (
     <div className="flex flex-col h-full bg-[#09090b] border-r border-white/5 w-64 flex-shrink-0">

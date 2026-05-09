@@ -6,10 +6,7 @@ import dotenv from 'dotenv';
 import multer from 'multer';
 import path from 'path';
 import { openRouterService } from './services/openrouter';
-import { dbService } from './database/sqlite';
 import { pipelineService } from './services/pipeline';
-import chatRoutes from './routes/chats';
-import workspaceRoutes from './routes/workspaces';
 import rateLimit from 'express-rate-limit';
 
 dotenv.config();
@@ -69,11 +66,8 @@ const upload = multer({ storage });
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Bestlink Digital AI Server is running' });
+  res.json({ status: 'ok', message: 'Bestlink Digital AI Engine is running' });
 });
-
-app.use('/api', chatRoutes);
-app.use('/api', workspaceRoutes);
 
 // Chat Endpoint (Streaming)
 app.post('/api/chat', async (req, res) => {
@@ -86,6 +80,7 @@ app.post('/api/chat', async (req, res) => {
   try {
     await openRouterService.streamChat(messages, model, options, (chunk) => {
       res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+      (res as any).flush?.();
     });
     res.write('data: [DONE]\n\n');
     res.end();
@@ -123,23 +118,15 @@ app.post('/api/pipeline', async (req, res) => {
 
   await pipelineService.runFullPipeline(prompt, (stage, data) => {
     res.write(`data: ${JSON.stringify({ stage, data })}\n\n`);
+    (res as any).flush?.();
   });
 
   res.write('data: [DONE]\n\n');
   res.end();
 });
 
-// Database Initialization & Start Server
-async function start() {
-  try {
-    await dbService.init();
-    app.listen(port, () => {
-      const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
-      console.log(`Server running at ${baseUrl}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-  }
-}
-
-start();
+// Start Server
+app.listen(port, () => {
+  const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
+  console.log(`AI Engine running at ${baseUrl}`);
+});

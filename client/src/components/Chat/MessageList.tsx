@@ -17,7 +17,15 @@ interface Message {
   timestamp: number;
 }
 
-export default function MessageList({ messages, isLoading }: { messages: Message[], isLoading?: boolean }) {
+export default function MessageList({ 
+  messages, 
+  isLoading, 
+  status 
+}: { 
+  messages: Message[], 
+  isLoading?: boolean, 
+  status?: string | null 
+}) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -33,6 +41,31 @@ export default function MessageList({ messages, isLoading }: { messages: Message
       {messages.map((message, i) => (
         <MessageItem key={message.id} message={message} isLast={i === messages.length - 1} />
       ))}
+      
+      {isLoading && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex gap-4 max-w-4xl mx-auto w-full px-4"
+        >
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
+          </div>
+          <div className="flex flex-col gap-2 flex-1">
+            <div className="bg-white/5 border border-white/5 px-5 py-4 rounded-2xl glass flex items-center gap-4">
+              <div className="flex gap-1.5">
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                <motion.div animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+              </div>
+              <span className="text-xs font-bold text-zinc-500 uppercase tracking-widest">
+                {status ? status.replace('_', ' ') : "Thinking..."}
+              </span>
+            </div>
+          </div>
+        </motion.div>
+      )}
+      
       <div ref={messagesEndRef} />
     </div>
   );

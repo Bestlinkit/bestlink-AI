@@ -16,11 +16,14 @@ const firebaseConfig = {
   measurementId: "G-B4P78FJVZN"
 };
 
+import { getFirestore } from "firebase/firestore";
+
 // Initialize Firebase
 // Use getApps() to prevent multiple initializations in Next.js
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 // Initialize Analytics only on the client side and if supported
 const analytics = typeof window !== "undefined" ? isSupported().then((supported) => supported ? getAnalytics(app) : null) : null;
 
-export { app, analytics };
+export { app, analytics, db };

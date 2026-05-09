@@ -1,6 +1,7 @@
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 
-interface Message {
+export interface Message {
   id: string;
   role: 'user' | 'assistant' | 'system';
   content: string;
@@ -8,7 +9,7 @@ interface Message {
   timestamp: number;
 }
 
-interface Chat {
+export interface Chat {
   id: string;
   title: string;
   messages: Message[];
@@ -23,80 +24,208 @@ export interface SandboxFile {
   content: string;
 }
 
+export interface Workspace {
+  id: string;
+  name: string;
+  chats: Chat[];
+  sandboxFiles: SandboxFile[];
+  activeFileId: string | null;
+  currentChatId: string | null;
+  lastActive: number;
+}
+
 interface AppState {
+  // UI State
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
-  chats: Chat[];
-  currentChatId: string | null;
-  addChat: (chat: Chat) => void;
-  setCurrentChat: (chatId: string) => void;
-  removeChat: (chatId: string) => void;
-  addMessage: (chatId: string, message: Message) => void;
-  updateLastMessage: (chatId: string, content: string | ((prev: string) => string)) => void;
-  model: string;
-  setModel: (model: string) => void;
   activeAgentId: string;
   setActiveAgent: (agentId: string) => void;
   theme: 'dark' | 'light';
   setTheme: (theme: 'dark' | 'light') => void;
-  sandboxFiles: SandboxFile[];
-  activeFileId: string | null;
+  isSandboxOpen: boolean;
+  setSandboxOpen: (open: boolean) => void;
+  
+  // Workspace State
+  workspaces: Workspace[];
+  activeWorkspaceId: string | null;
+  
+  // Actions
+  createWorkspace: (name: string) => string;
+  setActiveWorkspace: (id: string) => void;
+  deleteWorkspace: (id: string) => void;
+  updateWorkspace: (id: string, updates: Partial<Workspace>) => void;
+  
+  // Compatibility/Helper Actions (Proxy to active workspace)
+  addMessage: (chatId: string, message: Message) => void;
+  updateLastMessage: (chatId: string, content: string | ((prev: string) => string)) => void;
+  addChat: (chat: Chat) => void;
   setSandboxFiles: (files: SandboxFile[]) => void;
   updateFileContent: (id: string, content: string) => void;
   setActiveFile: (id: string) => void;
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  isSidebarOpen: true,
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-  chats: [],
-  currentChatId: null,
-  model: "anthropic/claude-3.5-sonnet",
-  activeAgentId: "designer",
-  theme: 'dark',
-  sandboxFiles: [
-    { id: '1', name: 'index.html', language: 'html', content: '<!DOCTYPE html>\n<html>\n<head>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body class="bg-black text-white flex items-center justify-center h-screen font-sans">\n  <div class="text-center">\n    <h1 class="text-4xl font-bold mb-4">Bestlink IDE</h1>\n    <p class="text-zinc-500">Professional Software Production Suite</p>\n  </div>\n</body>\n</html>' }
-  ],
-  activeFileId: '1',
-  addChat: (chat) => set((state) => ({ 
-    chats: [chat, ...state.chats],
-    currentChatId: chat.id 
-  })),
-  setCurrentChat: (chatId) => set({ currentChatId: chatId }),
-  removeChat: (chatId) => set((state) => ({ 
-    chats: state.chats.filter(c => c.id !== chatId),
-    currentChatId: state.currentChatId === chatId ? null : state.currentChatId
-  })),
-  addMessage: (chatId, message) => set((state) => ({
-    chats: state.chats.map(chat => 
-      chat.id === chatId 
-        ? { ...chat, messages: [...chat.messages, message] }
-        : chat
-    )
-  })),
-  updateLastMessage: (chatId, content) => set((state) => ({
-    chats: state.chats.map(chat => {
-      if (chat.id !== chatId) return chat;
-      const messages = [...chat.messages];
-      if (messages.length === 0) return chat;
-      const lastMessage = { ...messages[messages.length - 1] };
-      
-      if (typeof content === 'function') {
-        lastMessage.content = content(lastMessage.content);
-      } else {
-        lastMessage.content = content;
+const DEFAULT_FILES: SandboxFile[] = [
+  { 
+    id: '1', 
+    name: 'index.html', 
+    language: 'html', 
+    content: '<!DOCTYPE html>\n<html>\n<head>\n  <script src="https://cdn.tailwindcss.com"></script>\n</head>\n<body class="bg-black text-white flex items-center justify-center h-screen font-sans">\n  <div class="text-center">\n    <h1 class="text-4xl font-bold mb-4">Bestlink IDE</h1>\n    <p class="text-zinc-500">Professional Software Production Suite</p>\n  </div>\n</body>\n</html>' 
+  }
+];
+
+export const useAppStore = create<AppState>()(
+  persist(
+    (set, get) => ({
+      // UI Initial State
+      isSidebarOpen: true,
+      toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+      activeAgentId: "designer",
+      setActiveAgent: (agentId) => set({ activeAgentId: agentId }),
+      theme: 'dark',
+      setTheme: (theme) => set({ theme }),
+      isSandboxOpen: false,
+      setSandboxOpen: (open) => set({ isSandboxOpen: open }),
+
+      // Workspace Initial State
+      workspaces: [],
+      activeWorkspaceId: null,
+
+      // Workspace Actions
+      createWorkspace: (name) => {
+        const id = Math.random().toString(36).substring(7);
+        const newWorkspace: Workspace = {
+          id,
+          name,
+          chats: [],
+          sandboxFiles: [...DEFAULT_FILES],
+          activeFileId: '1',
+          currentChatId: null,
+          lastActive: Date.now()
+        };
+        set((state) => ({
+          workspaces: [newWorkspace, ...state.workspaces],
+          activeWorkspaceId: id
+        }));
+        return id;
+      },
+
+      setActiveWorkspace: (id) => set({ activeWorkspaceId: id }),
+
+      deleteWorkspace: (id) => set((state) => ({
+        workspaces: state.workspaces.filter(w => w.id !== id),
+        activeWorkspaceId: state.activeWorkspaceId === id ? null : state.activeWorkspaceId
+      })),
+
+      updateWorkspace: (id, updates) => set((state) => ({
+        workspaces: state.workspaces.map(w => 
+          w.id === id ? { ...w, ...updates, lastActive: Date.now() } : w
+        )
+      })),
+
+      // Helper Proxy Actions
+      addChat: (chat) => {
+        const activeId = get().activeWorkspaceId;
+        if (!activeId) return;
+        set((state) => ({
+          workspaces: state.workspaces.map(w => 
+            w.id === activeId 
+              ? { ...w, chats: [chat, ...w.chats], currentChatId: chat.id, lastActive: Date.now() }
+              : w
+          )
+        }));
+      },
+
+      addMessage: (chatId, message) => {
+        const activeId = get().activeWorkspaceId;
+        if (!activeId) return;
+        set((state) => ({
+          workspaces: state.workspaces.map(w => 
+            w.id === activeId 
+              ? { 
+                  ...w, 
+                  chats: w.chats.map(c => c.id === chatId ? { ...c, messages: [...c.messages, message] } : c),
+                  lastActive: Date.now()
+                }
+              : w
+          )
+        }));
+      },
+
+      updateLastMessage: (chatId, content) => {
+        const activeId = get().activeWorkspaceId;
+        if (!activeId) return;
+        set((state) => ({
+          workspaces: state.workspaces.map(w => {
+            if (w.id !== activeId) return w;
+            return {
+              ...w,
+              lastActive: Date.now(),
+              chats: w.chats.map(chat => {
+                if (chat.id !== chatId) return chat;
+                const messages = [...chat.messages];
+                if (messages.length === 0) return chat;
+                const lastMessage = { ...messages[messages.length - 1] };
+                
+                if (typeof content === 'function') {
+                  lastMessage.content = content(lastMessage.content);
+                } else {
+                  lastMessage.content = content;
+                }
+                
+                messages[messages.length - 1] = lastMessage;
+                return { ...chat, messages };
+              })
+            };
+          })
+        }));
+      },
+
+      setSandboxFiles: (files) => {
+        const activeId = get().activeWorkspaceId;
+        if (!activeId) return;
+        set((state) => ({
+          workspaces: state.workspaces.map(w => 
+            w.id === activeId ? { ...w, sandboxFiles: files, lastActive: Date.now() } : w
+          )
+        }));
+      },
+
+      updateFileContent: (id, content) => {
+        const activeId = get().activeWorkspaceId;
+        if (!activeId) return;
+        set((state) => ({
+          workspaces: state.workspaces.map(w => 
+            w.id === activeId 
+              ? { 
+                  ...w, 
+                  sandboxFiles: w.sandboxFiles.map(f => f.id === id ? { ...f, content } : f),
+                  lastActive: Date.now()
+                }
+              : w
+          )
+        }));
+      },
+
+      setActiveFile: (id) => {
+        const activeId = get().activeWorkspaceId;
+        if (!activeId) return;
+        set((state) => ({
+          workspaces: state.workspaces.map(w => 
+            w.id === activeId ? { ...w, activeFileId: id, lastActive: Date.now() } : w
+          )
+        }));
       }
-      
-      messages[messages.length - 1] = lastMessage;
-      return { ...chat, messages };
-    })
-  })),
-  setModel: (model) => set({ model }),
-  setActiveAgent: (agentId) => set({ activeAgentId: agentId }),
-  setTheme: (theme) => set({ theme }),
-  setSandboxFiles: (files) => set({ sandboxFiles: files }),
-  updateFileContent: (id, content) => set((state) => ({
-    sandboxFiles: state.sandboxFiles.map(f => f.id === id ? { ...f, content } : f)
-  })),
-  setActiveFile: (id) => set({ activeFileId: id })
-}));
+    }),
+    {
+      name: 'bestlink-storage',
+      partialize: (state) => ({
+        workspaces: state.workspaces,
+        activeWorkspaceId: state.activeWorkspaceId,
+        theme: state.theme,
+        activeAgentId: state.activeAgentId
+      })
+    }
+  )
+);
+
+

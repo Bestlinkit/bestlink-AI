@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 import CommandPalette from "@/components/Workspace/CommandPalette";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import ErrorBoundary from "@/components/Common/ErrorBoundary";
+import FirestoreSyncProvider from "@/components/Common/FirestoreSyncProvider";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -39,7 +41,11 @@ export default function RootLayout({
 
           <TooltipProvider>
             <CommandPalette />
-            {children}
+            <ErrorBoundary>
+              <FirestoreSyncProvider>
+                {children}
+              </FirestoreSyncProvider>
+            </ErrorBoundary>
             <Toaster position="top-right" theme="dark" richColors />
           </TooltipProvider>
         </div>

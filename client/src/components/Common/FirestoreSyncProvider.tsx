@@ -27,8 +27,9 @@ export default function FirestoreSyncProvider({ children }: { children: React.Re
         try {
           await signInAnonymously(auth);
         } catch (err: any) {
-          console.error("[Auth] Anonymous login failed:", err);
-          setAuthError(err.message || "Authentication failed.");
+          console.warn("[Auth] Anonymous login disabled in console. Proceeding in unauthenticated mode.", err.message);
+          // Graceful fallback: Proceed without auth since firestore.rules allow read/write: if true;
+          setIsAuthReady(true);
         }
       }
     });

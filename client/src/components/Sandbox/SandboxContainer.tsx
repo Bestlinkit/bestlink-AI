@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useRef, useEffect } from "react";
+import { AnimatePresence } from "framer-motion";
 import { 
   Maximize2,
   Globe,

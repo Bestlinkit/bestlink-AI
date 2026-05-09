@@ -15,10 +15,10 @@ const firebaseConfig = {
 };
 
 // Singleton Logic
-let app: FirebaseApp;
-let db: Firestore;
-let auth: Auth;
-let storage: FirebaseStorage;
+let app: FirebaseApp = {} as FirebaseApp;
+let db: Firestore = {} as Firestore;
+let auth: Auth = {} as Auth;
+let storage: FirebaseStorage = {} as FirebaseStorage;
 
 try {
   if (getApps().length > 0) {

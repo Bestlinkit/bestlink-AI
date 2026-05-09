@@ -24,6 +24,8 @@ app.use(helmet({
 
 const allowedOrigins = [
   'http://localhost:3000',
+  'https://bestlink-digital-ai.web.app',
+  'https://bestlink-digital-ai.firebaseapp.com',
   'https://bestlink-ai.web.app',
   'https://bestlink-ai.firebaseapp.com',
   process.env.FRONTEND_URL

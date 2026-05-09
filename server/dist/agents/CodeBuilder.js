@@ -42,12 +42,14 @@ class CodeBuilder extends BaseAgent_1.BaseAgent {
         const maxAttempts = 2;
         while (attempts < maxAttempts) {
             let fullResponse = "";
+            let lastEmitLength = 0;
             try {
                 for await (const chunk of this.streamAsk(currentPrompt, model)) {
                     if (chunk.choices?.[0]?.delta?.content) {
                         fullResponse += chunk.choices[0].delta.content;
-                        // Emit progress every ~200 characters to keep the UI active
-                        if (onProgress && fullResponse.length % 200 < 50) {
+                        // Throttled emit: Only send progress to UI after every 200 characters
+                        if (onProgress && fullResponse.length - lastEmitLength > 200) {
+                            lastEmitLength = fullResponse.length;
                             onProgress('GENERATING_FILES', {
                                 message: `Compiling VFS payload... (${Math.floor(fullResponse.length / 4)} tokens)`
                             });

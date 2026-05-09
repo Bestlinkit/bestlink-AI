@@ -1,6 +1,8 @@
 {
   "hosting": {
     "public": "client/out",
+    "cleanUrls": true,
+    "trailingSlash": false,
     "ignore": [
       "firebase.json",
       "**/.*",
@@ -12,5 +14,8 @@
         "destination": "/index.html"
       }
     ]
+  },
+  "firestore": {
+    "rules": "firestore.rules"
   }
 }

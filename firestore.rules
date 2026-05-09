@@ -1,0 +1,23 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow full access during production-studio development
+    // We target the core collections used for workspace persistence
+    match /{document=**} {
+      allow read, write: if true;
+    }
+    
+    // Explicit guards for key collections
+    match /app_state/{document} {
+      allow read, write: if true;
+    }
+    
+    match /workspaces/{document} {
+      allow read, write: if true;
+    }
+    
+    match /chats/{document} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -1,11 +1,13 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAppStore } from './useAppStore';
 import { db } from '../lib/firebase';
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { toast } from 'sonner';
+
+export type SyncStatus = 'ONLINE' | 'OFFLINE' | 'RECOVERING' | 'ERROR' | 'PERMISSION_DENIED';
 
 const getSessionId = () => {
   if (typeof window === 'undefined') return 'server';
-  // Use a stable ID per device/browser
   let id = localStorage.getItem('bestlink_session_id');
   if (!id) {
     id = 'user_' + Math.random().toString(36).substring(7);
@@ -14,49 +16,74 @@ const getSessionId = () => {
   return id;
 };
 
-export function useFirestoreSync() {
-  const isHydrated = useAppStore(state => !!state.activeWorkspaceId || state.workspaces.length > 0);
-  const lastSyncTimeRef = useRef<number>(0);
+export function useFirestoreSync(isAuthReady: boolean = false) {
+  const [status, setStatus] = useState<SyncStatus>('RECOVERING');
+  const isSyncingRef = useRef<boolean>(false);
+  const lastRemoteVersionRef = useRef<number>(0);
   const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
+  const consecutiveFailuresRef = useRef<number>(0);
 
   useEffect(() => {
+    // Phase 1: Guards
+    if (!db || !isAuthReady) {
+      if (!db) setStatus('OFFLINE');
+      return;
+    }
+
     const sessionId = getSessionId();
     const docRef = doc(db, 'app_state', `${sessionId}_bestlink-storage`);
 
-    // 1. Initial Load from Firestore (Priority over LocalStorage)
+    // 1. Initial Load & Presence Check
     const initLoad = async () => {
+      setStatus('RECOVERING');
       try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const rawData = docSnap.data().value as string;
           const parsed = JSON.parse(rawData);
-          if (parsed?.state?.workspaces) {
-            console.log("[FirestoreSync] Restoring state from cloud...");
+          if (parsed?.state?.workspaces && parsed.version > lastRemoteVersionRef.current) {
+            console.log("[FirestoreSync] Cloud recovery successful.");
+            
+            isSyncingRef.current = true;
             useAppStore.setState({
               workspaces: parsed.state.workspaces,
               activeWorkspaceId: parsed.state.activeWorkspaceId,
               theme: parsed.state.theme || 'dark',
               activeAgentId: parsed.state.activeAgentId || 'designer'
             });
-            lastSyncTimeRef.current = Date.now();
+            lastRemoteVersionRef.current = parsed.version;
+            setTimeout(() => { isSyncingRef.current = false; }, 1000);
           }
         }
-      } catch (err) {
+        setStatus('ONLINE');
+        consecutiveFailuresRef.current = 0;
+      } catch (err: any) {
         console.error("[FirestoreSync] Initial load failed:", err);
+        if (err.code === 'permission-denied') {
+          setStatus('PERMISSION_DENIED');
+          toast.error("Cloud Sync Permission Denied. Check infrastructure rules.");
+        } else {
+          setStatus('ERROR');
+        }
       }
     };
 
     initLoad();
 
-    // 2. Continuous Sync (Local -> Firestore)
-    const unsubStore = useAppStore.subscribe((state) => {
-      // Don't push if we just pulled from cloud
-      if (Date.now() - lastSyncTimeRef.current < 2000) return;
+    // 2. Outbound Sync (Local -> Firestore)
+    const unsubStore = useAppStore.subscribe((state, prevState) => {
+      if (isSyncingRef.current || status === 'PERMISSION_DENIED') return;
+
+      if (JSON.stringify(state.workspaces) === JSON.stringify(prevState.workspaces) && 
+          state.activeWorkspaceId === prevState.activeWorkspaceId) {
+        return;
+      }
 
       if (pendingUpdateRef.current) clearTimeout(pendingUpdateRef.current);
       
       pendingUpdateRef.current = setTimeout(async () => {
         try {
+          const version = Date.now();
           const payload = {
             state: {
               workspaces: state.workspaces,
@@ -64,46 +91,64 @@ export function useFirestoreSync() {
               theme: state.theme,
               activeAgentId: state.activeAgentId
             },
-            version: Date.now()
+            version,
+            source: sessionId
           };
+          
           await setDoc(docRef, { 
             value: JSON.stringify(payload), 
-            updatedAt: new Date().toISOString() 
+            updatedAt: Timestamp.now(),
+            version
           });
-          console.log("[FirestoreSync] Cloud sync complete.");
-        } catch (error) {
-          console.warn("[FirestoreSync] Sync failed:", error);
+          
+          lastRemoteVersionRef.current = version;
+          consecutiveFailuresRef.current = 0;
+          if (status !== 'ONLINE') setStatus('ONLINE');
+        } catch (error: any) {
+          consecutiveFailuresRef.current++;
+          console.warn("[FirestoreSync] Outbound sync failed:", error.message);
+          
+          if (error.code === 'permission-denied') {
+            setStatus('PERMISSION_DENIED');
+            toast.error("Cloud Sync: Insufficient Permissions.");
+          } else if (consecutiveFailuresRef.current > 3) {
+            setStatus('OFFLINE');
+          }
         }
-      }, 2000); // 2-second debounce to avoid rate limits
+      }, 5000);
     });
 
-    // 3. Remote Updates (Firestore -> Local)
+    // 3. Inbound Sync (Firestore -> Local)
     const unsubFirestore = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         try {
-          // Ignore if we just pushed
-          if (Date.now() - lastSyncTimeRef.current < 3000) return;
-
           const rawData = docSnap.data().value as string;
           const parsed = JSON.parse(rawData);
           
-          if (parsed?.state?.workspaces) {
-            const currentState = useAppStore.getState();
-            const cloudWorkspaces = parsed.state.workspaces;
-            
-            // Basic conflict resolution: only update if cloud is newer or local is empty
-            if (currentState.workspaces.length === 0 || parsed.version > (currentState.workspaces[0]?.lastActive || 0)) {
-               console.log("[FirestoreSync] Remote update detected. Merging...");
-               useAppStore.setState({ 
-                 workspaces: cloudWorkspaces,
-                 activeWorkspaceId: parsed.state.activeWorkspaceId || currentState.activeWorkspaceId
-               });
-               lastSyncTimeRef.current = Date.now();
-            }
-          }
+          if (parsed.source === sessionId) return;
+          if (parsed.version <= lastRemoteVersionRef.current) return;
+
+          console.log("[FirestoreSync] Remote change detected.");
+          
+          isSyncingRef.current = true;
+          useAppStore.setState({ 
+            workspaces: parsed.state.workspaces,
+            activeWorkspaceId: parsed.state.activeWorkspaceId || useAppStore.getState().activeWorkspaceId
+          });
+          lastRemoteVersionRef.current = parsed.version;
+          
+          setTimeout(() => { isSyncingRef.current = false; }, 1000);
+          setStatus('ONLINE');
         } catch (error) {
-          console.error("[FirestoreSync] Snap parse failed:", error);
+          console.error("[FirestoreSync] Inbound parse failed:", error);
         }
+      }
+    }, (err: any) => {
+      console.warn("[FirestoreSync] Snapshot listener failed:", err.message);
+      if (err.code === 'permission-denied') {
+        setStatus('PERMISSION_DENIED');
+      } else {
+        setStatus('OFFLINE');
       }
     });
 
@@ -112,5 +157,7 @@ export function useFirestoreSync() {
       unsubFirestore();
       if (pendingUpdateRef.current) clearTimeout(pendingUpdateRef.current);
     };
-  }, []);
+  }, [isAuthReady, status]);
+
+  return { status };
 }

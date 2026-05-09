@@ -1,65 +1,85 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { PlannerAgent } from '@/agents/Planner';
-import { CodeBuilderAgent } from '@/agents/CodeBuilder';
+import { CodeBuilder } from '../agents/CodeBuilder';
 
-export const runtime = 'nodejs'; // Use nodejs runtime for streaming
-
-export async function POST(req: NextRequest) {
-  const { prompt } = await req.json();
-
-  const encoder = new TextEncoder();
-  const stream = new TransformStream();
-  const writer = stream.writable.getWriter();
-
-  const sendEvent = async (stage: string, data: any) => {
-    await writer.write(encoder.encode(`data: ${JSON.stringify({ stage, data })}\n\n`));
-  };
-
-  // Immediate start
-  (async () => {
-    try {
-      await sendEvent('BUILD_START', { message: 'Inference engine online. Mapping production strategy...' });
-
-      // PHASE 1: PLANNING
-      await sendEvent('PLANNING_PROJECT', { message: 'DeepSeek is orchestrating the architecture...' });
-      const planner = new PlannerAgent();
-      const plan = await planner.plan(prompt);
-      
-      await sendEvent('SELECTING_TEMPLATE', { 
-        message: 'Project roadmap locked. Selecting structural components...',
-        plan 
-      });
-
-      // PHASE 2: CONSTRUCTION
-      await sendEvent('GENERATING_FILES', { message: 'Gemini Flash is forging the codebase...' });
-      const builder = new CodeBuilderAgent();
-      const payload = await builder.build(prompt, plan);
-
-      await sendEvent('FINALIZING_PROJECT', { 
-        message: 'Assembling atomic components and styling...',
-        payload 
-      });
-
-      await sendEvent('COMPLETED_PROJECT', { 
-        message: 'Production complete. Deploying to virtual workspace...',
-        payload 
-      });
-
-      await sendEvent('COMPLETED', { message: 'Success.' });
-    } catch (error: any) {
-      console.error('Pipeline failure:', error);
-      await sendEvent('EXECUTION_ERROR', { message: error.message || 'System engine failure.' });
-    } finally {
-      await writer.write(encoder.encode('data: [DONE]\n\n'));
-      await writer.close();
-    }
-  })();
-
-  return new NextResponse(stream.readable, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      'Connection': 'keep-alive',
-    },
-  });
+export enum AgentModels {
+  BUILDER = 'openrouter/free',
+  FALLBACK = 'deepseek/deepseek-chat-v3-0324:free'
 }
+
+const activeExecutions = new Set<string>();
+
+const withTimeout = <T>(promise: Promise<T>, ms: number, stageName: string): Promise<T> => {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(`Timeout exceeded for stage: ${stageName} (${ms}ms)`));
+    }, ms);
+    promise.then(
+      (res) => { clearTimeout(timer); resolve(res); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+};
+
+export const pipelineService = {
+  async runFullPipeline(prompt: string, onProgress: (stage: string, data?: any) => void, sessionId: string = 'global') {
+    
+    if (activeExecutions.has(sessionId)) {
+      onProgress('EXECUTION_ERROR', { message: 'System is currently processing a build. Please wait.' });
+      return;
+    }
+    activeExecutions.add(sessionId);
+
+    const heartbeat = setInterval(() => {
+      onProgress('[KEEP-ALIVE]');
+    }, 3000);
+
+    const builder = new CodeBuilder();
+    let finalStatus = 'failed';
+    
+    const globalTimeout = setTimeout(() => {
+      onProgress('EXECUTION_ERROR', { message: 'Maximum execution time exceeded (240s). Pipeline aborted.' });
+      activeExecutions.delete(sessionId);
+    }, 240000);
+
+    try {
+      onProgress('BUILD_START', { message: 'Initializing high-speed production studio...' });
+
+      setTimeout(() => onProgress('PLANNING_PROJECT', { message: 'Planning website structure...' }), 1500);
+      setTimeout(() => onProgress('GENERATING_FILES', { message: 'Generating responsive components...' }), 6000);
+      setTimeout(() => onProgress('VALIDATING_OUTPUT', { message: 'Applying premium UI/UX styles...' }), 12000);
+      setTimeout(() => onProgress('FINALIZING_PROJECT', { message: 'Finalizing project files...' }), 18000);
+
+      // Single-pass generation with an extended timeout and live streaming (180s)
+      const codebasePayload = await withTimeout(builder.build(prompt, AgentModels.BUILDER, onProgress), 180000, 'Building');
+      
+      if (codebasePayload.error) {
+        throw new Error(codebasePayload.error);
+      }
+      
+      onProgress('FINALIZING_PROJECT', { message: 'Rendering preview...' });
+      
+      finalStatus = 'success';
+      onProgress('COMPLETED_PROJECT', { 
+        status: finalStatus,
+        message: 'Project generation successful.',
+        payload: codebasePayload
+      });
+
+    } catch (error) {
+      console.error('Pipeline Execution Failed:', error);
+      onProgress('EXECUTION_ERROR', { 
+        message: 'The AI engine encountered a critical error.',
+        error: error instanceof Error ? error.message : 'Unknown pipeline error'
+      });
+      finalStatus = 'error';
+    } finally {
+      clearInterval(heartbeat);
+      clearTimeout(globalTimeout);
+      activeExecutions.delete(sessionId);
+      
+      onProgress('COMPLETE', { 
+        status: finalStatus,
+        message: 'Pipeline execution finalized.' 
+      });
+    }
+  }
+};

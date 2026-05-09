@@ -49,29 +49,51 @@ export const openRouterService = {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://bestlink-digital-ai.local',
-        'X-Title': 'Bestlink Digital AI',
-      },
-      body: JSON.stringify({
-        model,
-        messages,
-        temperature: options.temperature ?? 0.7,
-        max_tokens: options.max_tokens ?? 4000,
-      }),
-    });
+    const modelsToTry = [model, ...FALLBACK_ORDER.filter(m => m !== model)];
+    let lastError = null;
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.error?.message || `API Error ${response.status}`);
+    for (const currentModel of modelsToTry) {
+      try {
+        console.log(`[OpenRouter] Attempting request with: ${currentModel}`);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 180000);
+
+        const response = await fetch(OPENROUTER_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': 'https://bestlink-digital-ai.local',
+            'X-Title': 'Bestlink Digital AI',
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            messages,
+            temperature: options.temperature ?? 0.7,
+            max_tokens: options.max_tokens ?? 8000, // Increase max tokens for building
+          }),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.error?.message || `API Error ${response.status}`);
+        }
+
+        const data = await response.json();
+        const content = data.choices?.[0]?.message?.content || "";
+        if (!content) throw new Error("Empty response from AI");
+        
+        return content;
+      } catch (err: any) {
+        lastError = err;
+        console.warn(`[OpenRouter] Model ${currentModel} failed: ${err.message}. Retrying...`);
+      }
     }
 
-    const data = await response.json();
-    return data.choices?.[0]?.message?.content || "";
+    throw lastError || new Error('All models failed to respond.');
   },
 
   async *streamChatGenerator(

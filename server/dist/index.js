@@ -11,10 +11,7 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const multer_1 = __importDefault(require("multer"));
 const path_1 = __importDefault(require("path"));
 const openrouter_1 = require("./services/openrouter");
-const sqlite_1 = require("./database/sqlite");
 const pipeline_1 = require("./services/pipeline");
-const chats_1 = __importDefault(require("./routes/chats"));
-const workspaces_1 = __importDefault(require("./routes/workspaces"));
 const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -64,10 +61,8 @@ const storage = multer_1.default.diskStorage({
 const upload = (0, multer_1.default)({ storage });
 // Routes
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Bestlink Digital AI Server is running' });
+    res.json({ status: 'ok', message: 'Bestlink Digital AI Engine is running' });
 });
-app.use('/api', chats_1.default);
-app.use('/api', workspaces_1.default);
 // Chat Endpoint (Streaming)
 app.post('/api/chat', async (req, res) => {
     const { messages, model, options } = req.body;
@@ -77,6 +72,7 @@ app.post('/api/chat', async (req, res) => {
     try {
         await openrouter_1.openRouterService.streamChat(messages, model, options, (chunk) => {
             res.write(`data: ${JSON.stringify(chunk)}\n\n`);
+            res.flush?.();
         });
         res.write('data: [DONE]\n\n');
         res.end();
@@ -110,21 +106,13 @@ app.post('/api/pipeline', async (req, res) => {
     res.setHeader('Connection', 'keep-alive');
     await pipeline_1.pipelineService.runFullPipeline(prompt, (stage, data) => {
         res.write(`data: ${JSON.stringify({ stage, data })}\n\n`);
+        res.flush?.();
     });
     res.write('data: [DONE]\n\n');
     res.end();
 });
-// Database Initialization & Start Server
-async function start() {
-    try {
-        await sqlite_1.dbService.init();
-        app.listen(port, () => {
-            const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
-            console.log(`Server running at ${baseUrl}`);
-        });
-    }
-    catch (error) {
-        console.error('Failed to start server:', error);
-    }
-}
-start();
+// Start Server
+app.listen(port, () => {
+    const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
+    console.log(`AI Engine running at ${baseUrl}`);
+});

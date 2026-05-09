@@ -1,11 +1,9 @@
-// Import the functions you need from the SDKs you need
-import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAnalytics, isSupported } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+import { initializeApp, getApps, getApp, FirebaseApp } from "firebase/app";
+import { getFirestore, Firestore } from "firebase/firestore";
+import { getAuth, Auth } from "firebase/auth";
+import { getStorage, FirebaseStorage } from "firebase/storage";
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Production Config (Hardcoded for stability as per project state)
 const firebaseConfig = {
   apiKey: "AIzaSyApxd8vnuqSDhe47X-uYe-3e6AxNZ0m2ik",
   authDomain: "bestlink-digital-ai.firebaseapp.com",
@@ -16,14 +14,27 @@ const firebaseConfig = {
   measurementId: "G-B4P78FJVZN"
 };
 
-import { getFirestore } from "firebase/firestore";
+// Singleton Logic
+let app: FirebaseApp;
+let db: Firestore;
+let auth: Auth;
+let storage: FirebaseStorage;
 
-// Initialize Firebase
-// Use getApps() to prevent multiple initializations in Next.js
-const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
-const db = getFirestore(app);
+try {
+  if (getApps().length > 0) {
+    app = getApp();
+  } else {
+    app = initializeApp(firebaseConfig);
+  }
+  
+  db = getFirestore(app);
+  auth = getAuth(app);
+  storage = getStorage(app);
+  
+  console.log("[Firebase] Infrastructure initialized successfully.");
+} catch (error) {
+  console.error("[Firebase] Initialization failed. System running in DEGRADED mode.", error);
+}
 
-// Initialize Analytics only on the client side and if supported
-const analytics = typeof window !== "undefined" ? isSupported().then((supported) => supported ? getAnalytics(app) : null) : null;
-
-export { app, analytics, db };
+export { app, db, auth, storage };
+export default app;

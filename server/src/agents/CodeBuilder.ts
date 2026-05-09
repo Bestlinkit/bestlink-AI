@@ -33,7 +33,7 @@ export class CodeBuilder extends BaseAgent {
     );
   }
 
-  async build(prompt: string, model?: string) {
+  async build(prompt: string, model?: string, onProgress?: (stage: string, data?: any) => void) {
     let currentPrompt = `Generate a complete, premium, production-ready project based on this request:
     
     USER REQUEST:
@@ -46,10 +46,28 @@ export class CodeBuilder extends BaseAgent {
     const maxAttempts = 2;
 
     while (attempts < maxAttempts) {
-      const response = await this.ask(currentPrompt, model);
+      let fullResponse = "";
+      
+      try {
+        for await (const chunk of this.streamAsk(currentPrompt, model)) {
+          if (chunk.choices?.[0]?.delta?.content) {
+            fullResponse += chunk.choices[0].delta.content;
+            
+            // Emit progress every ~200 characters to keep the UI active
+            if (onProgress && fullResponse.length % 200 < 50) {
+               onProgress('GENERATING_FILES', { 
+                 message: `Compiling VFS payload... (${Math.floor(fullResponse.length / 4)} tokens)` 
+               });
+            }
+          }
+        }
+      } catch (streamError) {
+        console.error("Stream error:", streamError);
+        // Fallback to what we have or let it retry
+      }
       
       // 1. Output Sanitization
-      let sanitizedOutput = response.trim();
+      let sanitizedOutput = fullResponse.trim();
       if (sanitizedOutput.startsWith('```json')) sanitizedOutput = sanitizedOutput.substring(7);
       else if (sanitizedOutput.startsWith('```')) sanitizedOutput = sanitizedOutput.substring(3);
       if (sanitizedOutput.endsWith('```')) sanitizedOutput = sanitizedOutput.substring(0, sanitizedOutput.length - 3);

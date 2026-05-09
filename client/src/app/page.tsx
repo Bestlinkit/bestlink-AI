@@ -1,22 +1,35 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import SandboxContainer from "@/components/Sandbox/SandboxContainer";
 import LandingPage from "@/components/Landing/LandingPage";
 import { useAppStore } from "@/store/useAppStore";
+import { useFirestoreSync } from "@/store/useFirestoreSync";
 import { cn } from "@/lib/utils";
-import { Zap, Terminal, Globe, PanelLeftClose, PanelLeftOpen } from "lucide-react";
-import * as Resizable from "react-resizable-panels";
-
-// Bypass type issues with unstable library versions
-const PanelGroup = (Resizable as any).PanelGroup || (Resizable as any).Group;
-const Panel = (Resizable as any).Panel;
-const PanelResizeHandle = (Resizable as any).PanelResizeHandle || (Resizable as any).Separator;
+import { 
+  Zap, 
+  Terminal, 
+  Globe, 
+  PanelLeftClose, 
+  PanelLeftOpen, 
+  Database,
+  Wifi,
+  WifiOff,
+  CloudLightning,
+  AlertCircle,
+  ShieldAlert
+} from "lucide-react";
 
 export default function Home() {
   const [isStarted, setIsStarted] = useState(false);
+  const [previewWidth, setPreviewWidth] = useState(55); // percentage
+  const [isResizing, setIsResizing] = useState(false);
+  const resizerRef = useRef<HTMLDivElement>(null);
+
+  const { status: syncStatus } = useFirestoreSync();
+
   const { 
     isSidebarOpen, 
     toggleSidebar, 
@@ -37,6 +50,29 @@ export default function Home() {
       setActiveWorkspace(workspaces[0].id);
     }
   }, [workspaces, activeWorkspaceId, createWorkspace, setActiveWorkspace]);
+
+  const startResizing = useCallback(() => setIsResizing(true), []);
+  const stopResizing = useCallback(() => setIsResizing(false), []);
+  
+  const resize = useCallback((e: MouseEvent) => {
+    if (isResizing) {
+      const newWidth = ((window.innerWidth - e.clientX) / window.innerWidth) * 100;
+      if (newWidth > 25 && newWidth < 85) {
+        setPreviewWidth(newWidth);
+      }
+    }
+  }, [isResizing]);
+
+  useEffect(() => {
+    if (isResizing) {
+      window.addEventListener("mousemove", resize);
+      window.addEventListener("mouseup", stopResizing);
+    }
+    return () => {
+      window.removeEventListener("mousemove", resize);
+      window.removeEventListener("mouseup", stopResizing);
+    };
+  }, [isResizing, resize, stopResizing]);
 
   if (!isStarted) {
     return <LandingPage onStart={() => setIsStarted(true)} />;
@@ -59,7 +95,7 @@ export default function Home() {
               </button>
               
               <div className="flex items-center gap-2 group cursor-pointer" onClick={() => setIsStarted(false)}>
-                <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
                   <Zap className="w-3.5 h-3.5 text-white fill-current" />
                 </div>
                 <span className="text-sm font-bold text-white font-outfit uppercase tracking-tighter">
@@ -69,9 +105,24 @@ export default function Home() {
             </div>
             
             <div className="h-4 w-[1px] bg-white/10" />
-            <div className="hidden md:flex items-center gap-2">
-              <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Studio</span>
-              <div className="px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-[9px] font-bold text-blue-400 uppercase">Pro</div>
+            
+            {/* FIRESTORE CONNECTION GUARD BADGE */}
+            <div className={cn(
+              "flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-500",
+              syncStatus === 'ONLINE' ? "bg-green-500/5 border-green-500/20 text-green-500" :
+              syncStatus === 'RECOVERING' ? "bg-blue-500/5 border-blue-500/20 text-blue-500 animate-pulse" :
+              syncStatus === 'OFFLINE' ? "bg-yellow-500/5 border-yellow-500/20 text-yellow-500" :
+              syncStatus === 'PERMISSION_DENIED' ? "bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" :
+              "bg-red-500/5 border-red-500/20 text-red-500"
+            )}>
+              {syncStatus === 'ONLINE' ? <Wifi className="w-3 h-3" /> :
+               syncStatus === 'RECOVERING' ? <CloudLightning className="w-3 h-3" /> :
+               syncStatus === 'OFFLINE' ? <WifiOff className="w-3 h-3" /> :
+               syncStatus === 'PERMISSION_DENIED' ? <ShieldAlert className="w-3 h-3" /> :
+               <AlertCircle className="w-3 h-3" />}
+              <span className="text-[9px] font-bold uppercase tracking-widest">
+                {syncStatus?.replace('_', ' ')}
+              </span>
             </div>
           </div>
 
@@ -86,7 +137,7 @@ export default function Home() {
               )}
             >
               <Terminal className="w-3.5 h-3.5" />
-              {isSandboxOpen ? "Close Preview" : "Open Preview"}
+              {isSandboxOpen ? "Close Preview" : "Live Preview"}
             </button>
 
             <div className="h-6 w-[1px] bg-white/10 mx-1" />
@@ -97,46 +148,44 @@ export default function Home() {
           </div>
         </header>
 
-        {/* 
-          STABLE WORKSPACE 
-          Using dynamic component detection to avoid library version conflicts
-        */}
-        <div className="flex-1 min-h-0 relative">
-          {PanelGroup ? (
-            <PanelGroup direction="horizontal">
-              <Panel defaultSize={45} minSize={30} className="relative flex flex-col">
-                <div className="flex-1 overflow-hidden">
-                  <ChatInterface />
-                </div>
-              </Panel>
-              
-              {isSandboxOpen && (
-                <>
-                  <PanelResizeHandle className="w-[1px] bg-white/5 hover:bg-blue-500/50 transition-all cursor-col-resize relative group">
-                    <div className="absolute inset-y-0 -left-1 -right-1 z-10" />
-                  </PanelResizeHandle>
-                  <Panel defaultSize={55} minSize={30} className="relative flex flex-col">
-                    <div className="flex-1 bg-[#050505] overflow-hidden">
-                      <SandboxContainer />
-                    </div>
-                  </Panel>
-                </>
-              )}
-            </PanelGroup>
-          ) : (
-            <div className="flex h-full w-full overflow-hidden">
-               <div className="flex-1 overflow-hidden">
-                  <ChatInterface />
-               </div>
-               {isSandboxOpen && (
-                 <div className="w-[55%] border-l border-white/5 overflow-hidden">
-                   <SandboxContainer />
-                 </div>
-               )}
-            </div>
+        {/* BULLETPROOF WORKSPACE LAYOUT */}
+        <div className="flex-1 min-h-0 flex relative">
+          <div 
+            className="flex flex-col min-w-0 h-full overflow-hidden"
+            style={{ flex: isSandboxOpen ? `1 1 ${100 - previewWidth}%` : "1 1 100%" }}
+          >
+            <ChatInterface />
+          </div>
+
+          {isSandboxOpen && (
+            <>
+              {/* DRAGGABLE RESIZER */}
+              <div 
+                onMouseDown={startResizing}
+                className={cn(
+                  "w-[2px] bg-white/5 hover:bg-blue-500/50 transition-all cursor-col-resize relative z-40 group",
+                  isResizing && "bg-blue-500"
+                )}
+              >
+                <div className="absolute inset-y-0 -left-2 -right-2" />
+              </div>
+
+              <div 
+                className={cn(
+                  "flex flex-col bg-[#050505] overflow-hidden relative h-full",
+                  isResizing && "pointer-events-none"
+                )}
+                style={{ flex: `0 0 ${previewWidth}%` }}
+              >
+                <SandboxContainer />
+              </div>
+            </>
           )}
         </div>
       </main>
+
+      {/* OVERLAY FOR RESIZING PROTECTION */}
+      {isResizing && <div className="fixed inset-0 z-[100] cursor-col-resize" />}
     </div>
   );
 }

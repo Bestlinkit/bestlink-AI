@@ -150,7 +150,7 @@ export default function SandboxContainer() {
               }
             }}
           >
-            <SandpackLayout style={{ height: '100%', background: 'transparent', border: 'none' }}>
+            <SandpackLayout style={{ height: '100%', background: 'transparent', border: 'none', minHeight: 0 }}>
               <SandpackFileExplorer />
               <SandpackCodeEditor 
                 showLineNumbers
@@ -158,13 +158,14 @@ export default function SandboxContainer() {
                 closableTabs
                 style={{ height: '100%' }}
               />
-              <div className="flex-1 h-full bg-[#050505] relative flex items-center justify-center p-8 overflow-hidden">
+              <div className="flex-1 h-full bg-[#050505] relative flex items-center justify-center p-4 md:p-8 overflow-hidden min-w-0">
                 <div 
-                  className="bg-white shadow-[0_0_100px_rgba(0,0,0,0.5)] transition-all duration-700 ease-in-out rounded-2xl overflow-hidden border border-white/5"
+                  className="bg-white shadow-[0_0_100px_rgba(0,0,0,0.5)] transition-all duration-700 ease-in-out rounded-2xl overflow-hidden border border-white/5 relative"
                   style={{ 
                     width: getViewportWidth(),
                     height: '100%',
-                    maxWidth: '100%'
+                    maxWidth: '100%',
+                    maxHeight: '100%'
                   }}
                 >
                   <SandpackPreview 

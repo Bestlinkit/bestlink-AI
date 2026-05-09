@@ -35,6 +35,44 @@ body {
   letter-spacing: -0.01em;
 }
 
+/* App Shell Grid System */
+.app-shell {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto 1fr;
+  grid-template-areas: 
+    "sidebar header"
+    "sidebar main";
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+}
+
+.sidebar-area { grid-area: sidebar; }
+.header-area { grid-area: header; }
+.main-area { grid-area: main; }
+
+.main-content-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, var(--preview-width, 1.2fr));
+  height: 100%;
+  width: 100%;
+}
+
+@media (max-width: 1024px) {
+  .main-content-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+}
+
+.independent-scroll {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-gutter: stable;
+}
+
 @layer components {
   .glass {
     @apply bg-white/[0.03] backdrop-blur-2xl border border-white/10 shadow-[0_0_50px_rgba(0,0,0,0.5)];

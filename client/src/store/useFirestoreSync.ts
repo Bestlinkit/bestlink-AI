@@ -1,26 +1,58 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from './useAppStore';
 import { db } from '../lib/firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 
 const getSessionId = () => {
   if (typeof window === 'undefined') return 'server';
-  return localStorage.getItem('bestlink_session_id') || 'session_default';
+  // Use a stable ID per device/browser
+  let id = localStorage.getItem('bestlink_session_id');
+  if (!id) {
+    id = 'user_' + Math.random().toString(36).substring(7);
+    localStorage.setItem('bestlink_session_id', id);
+  }
+  return id;
 };
 
 export function useFirestoreSync() {
-  const isHydrated = useAppStore(state => state.workspaces.length > 0);
-  const lastSyncTimeRef = useRef<number>(Date.now());
+  const isHydrated = useAppStore(state => !!state.activeWorkspaceId || state.workspaces.length > 0);
+  const lastSyncTimeRef = useRef<number>(0);
   const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isHydrated) return;
-
     const sessionId = getSessionId();
     const docRef = doc(db, 'app_state', `${sessionId}_bestlink-storage`);
 
-    // 1. Listen for local Zustand state changes and push to Firestore
+    // 1. Initial Load from Firestore (Priority over LocalStorage)
+    const initLoad = async () => {
+      try {
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const rawData = docSnap.data().value as string;
+          const parsed = JSON.parse(rawData);
+          if (parsed?.state?.workspaces) {
+            console.log("[FirestoreSync] Restoring state from cloud...");
+            useAppStore.setState({
+              workspaces: parsed.state.workspaces,
+              activeWorkspaceId: parsed.state.activeWorkspaceId,
+              theme: parsed.state.theme || 'dark',
+              activeAgentId: parsed.state.activeAgentId || 'designer'
+            });
+            lastSyncTimeRef.current = Date.now();
+          }
+        }
+      } catch (err) {
+        console.error("[FirestoreSync] Initial load failed:", err);
+      }
+    };
+
+    initLoad();
+
+    // 2. Continuous Sync (Local -> Firestore)
     const unsubStore = useAppStore.subscribe((state) => {
+      // Don't push if we just pulled from cloud
+      if (Date.now() - lastSyncTimeRef.current < 2000) return;
+
       if (pendingUpdateRef.current) clearTimeout(pendingUpdateRef.current);
       
       pendingUpdateRef.current = setTimeout(async () => {
@@ -32,43 +64,45 @@ export function useFirestoreSync() {
               theme: state.theme,
               activeAgentId: state.activeAgentId
             },
-            version: 0
+            version: Date.now()
           };
-          lastSyncTimeRef.current = Date.now();
-          await setDoc(docRef, { value: JSON.stringify(payload), updatedAt: new Date().toISOString() });
+          await setDoc(docRef, { 
+            value: JSON.stringify(payload), 
+            updatedAt: new Date().toISOString() 
+          });
+          console.log("[FirestoreSync] Cloud sync complete.");
         } catch (error) {
-          console.error("Failed to upload state to Firestore:", error);
+          console.warn("[FirestoreSync] Sync failed:", error);
         }
-      }, 1000); // 1-second debounce
+      }, 2000); // 2-second debounce to avoid rate limits
     });
 
-    // 2. Listen for remote Firestore changes and merge down
+    // 3. Remote Updates (Firestore -> Local)
     const unsubFirestore = onSnapshot(docRef, (docSnap) => {
       if (docSnap.exists()) {
         try {
-          // Ignore remote snapshots that just echoed our own recent upload
-          if (Date.now() - lastSyncTimeRef.current < 2000) return;
+          // Ignore if we just pushed
+          if (Date.now() - lastSyncTimeRef.current < 3000) return;
 
           const rawData = docSnap.data().value as string;
           const parsed = JSON.parse(rawData);
           
-          if (parsed && parsed.state && parsed.state.workspaces) {
+          if (parsed?.state?.workspaces) {
             const currentState = useAppStore.getState();
             const cloudWorkspaces = parsed.state.workspaces;
-            const activeId = currentState.activeWorkspaceId || parsed.state.activeWorkspaceId;
             
-            const localActive = currentState.workspaces.find(w => w.id === activeId);
-            const cloudActive = cloudWorkspaces.find((w: any) => w.id === activeId);
-            
-            if (!localActive || (cloudActive && cloudActive.lastActive > localActive.lastActive)) {
+            // Basic conflict resolution: only update if cloud is newer or local is empty
+            if (currentState.workspaces.length === 0 || parsed.version > (currentState.workspaces[0]?.lastActive || 0)) {
+               console.log("[FirestoreSync] Remote update detected. Merging...");
                useAppStore.setState({ 
                  workspaces: cloudWorkspaces,
                  activeWorkspaceId: parsed.state.activeWorkspaceId || currentState.activeWorkspaceId
                });
+               lastSyncTimeRef.current = Date.now();
             }
           }
         } catch (error) {
-          console.error("Failed to parse Firestore snapshot:", error);
+          console.error("[FirestoreSync] Snap parse failed:", error);
         }
       }
     });
@@ -78,5 +112,5 @@ export function useFirestoreSync() {
       unsubFirestore();
       if (pendingUpdateRef.current) clearTimeout(pendingUpdateRef.current);
     };
-  }, [isHydrated]);
+  }, []);
 }

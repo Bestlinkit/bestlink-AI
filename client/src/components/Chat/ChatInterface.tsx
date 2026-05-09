@@ -256,13 +256,13 @@ export default function ChatInterface() {
             <div className="flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                Agent: <span className="text-zinc-200">{activeAgent.name}</span>
+                Agent: <span className="text-blue-400">{activeAgent.name}</span>
               </span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-1.5 h-1.5 rounded-full bg-green-500" />
+              <div className="w-1 h-4 bg-green-500/40 rounded-full" />
               <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                Mode: <span className="text-zinc-200">Production</span>
+                Mode: <span className="text-zinc-200">Prod</span>
               </span>
             </div>
           </div>
@@ -310,15 +310,16 @@ export default function ChatInterface() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.2 }}
-                className="text-5xl font-bold font-outfit tracking-tight text-white leading-tight"
+                className="text-6xl font-bold font-outfit tracking-tighter text-white leading-tight"
               >
-                What shall we build <span className="gradient-text">today?</span>
+                What shall we build <br />
+                <span className="gradient-text drop-shadow-[0_0_30px_rgba(59,130,246,0.3)]">today?</span>
               </motion.h1>
               <motion.p 
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
-                className="text-zinc-500 text-lg max-w-xl mx-auto font-medium"
+                className="text-zinc-400 text-lg max-w-xl mx-auto font-medium leading-relaxed"
               >
                 Orchestrate elite software production with the Bestlink multi-agent engine. 
                 From SaaS platforms to complex digital architectures.

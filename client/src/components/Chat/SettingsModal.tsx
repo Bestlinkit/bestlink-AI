@@ -23,32 +23,36 @@ export default function SettingsModal({ children }: { children: React.ReactEleme
   return (
     <Dialog>
       <DialogTrigger render={children} />
-      <DialogContent className="max-w-2xl bg-[#09090b] border-white/5 text-zinc-200">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold font-outfit flex items-center gap-2">
-            <Settings className="w-5 h-5 text-blue-500" />
-            System Configuration
-          </DialogTitle>
-          <DialogDescription className="text-zinc-500 text-xs">
-            Manage your AI intelligence, workspace preferences, and production settings.
-          </DialogDescription>
-        </DialogHeader>
+      <DialogContent className="max-w-2xl bg-[#09090b]/95 backdrop-blur-2xl border-white/5 text-zinc-200 shadow-2xl p-0 overflow-hidden rounded-[2rem]">
+        <div className="p-8 pb-4">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold font-outfit flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20">
+                <Settings className="w-5 h-5 text-blue-500" />
+              </div>
+              System Configuration
+            </DialogTitle>
+            <DialogDescription className="text-zinc-500 text-xs mt-1.5 ml-[52px]">
+              Manage your AI intelligence, workspace preferences, and production settings.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
 
-        <Tabs defaultValue="general" className="mt-4">
-          <TabsList className="bg-white/5 border border-white/5 w-full justify-start p-1 h-auto gap-1">
-            <TabsTrigger value="general" className="text-xs py-2 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+        <Tabs defaultValue="general" className="px-8 pb-8">
+          <TabsList className="bg-white/[0.03] border border-white/5 w-full justify-start p-1 h-auto gap-1 rounded-2xl">
+            <TabsTrigger value="general" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
               <Globe className="w-3.5 h-3.5" />
               General
             </TabsTrigger>
-            <TabsTrigger value="intelligence" className="text-xs py-2 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <TabsTrigger value="intelligence" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
               <Cpu className="w-3.5 h-3.5" />
               Intelligence
             </TabsTrigger>
-            <TabsTrigger value="appearance" className="text-xs py-2 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <TabsTrigger value="appearance" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
               <Palette className="w-3.5 h-3.5" />
               Appearance
             </TabsTrigger>
-            <TabsTrigger value="security" className="text-xs py-2 gap-2 data-[state=active]:bg-blue-600 data-[state=active]:text-white">
+            <TabsTrigger value="security" className="text-xs py-2.5 px-4 gap-2 rounded-xl data-[state=active]:bg-blue-600 data-[state=active]:text-white data-[state=active]:shadow-lg transition-all">
               <Shield className="w-3.5 h-3.5" />
               Security
             </TabsTrigger>
@@ -56,13 +60,13 @@ export default function SettingsModal({ children }: { children: React.ReactEleme
 
           <TabsContent value="general" className="mt-6 space-y-6">
             <div className="space-y-4">
-              <div className="grid gap-2">
-                <Label htmlFor="workspace" className="text-xs text-zinc-500 font-bold uppercase tracking-widest">Workspace Name</Label>
-                <Input id="workspace" defaultValue="Bestlink Production" className="bg-white/5 border-white/10" />
+              <div className="grid gap-2.5">
+                <Label htmlFor="workspace" className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] ml-1">Workspace Name</Label>
+                <Input id="workspace" defaultValue="Bestlink Production" className="bg-white/[0.02] border-white/10 h-11 rounded-xl px-4 focus:ring-2 focus:ring-blue-500/20 transition-all" />
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="base-url" className="text-xs text-zinc-500 font-bold uppercase tracking-widest">API Endpoint</Label>
-                <Input id="base-url" defaultValue="http://localhost:5000" className="bg-white/5 border-white/10 font-mono text-[10px]" />
+              <div className="grid gap-2.5">
+                <Label htmlFor="base-url" className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] ml-1">API Endpoint</Label>
+                <Input id="base-url" defaultValue="http://localhost:5000" className="bg-white/[0.02] border-white/10 h-11 rounded-xl px-4 font-mono text-[11px] text-blue-400 focus:ring-2 focus:ring-blue-500/20 transition-all" />
               </div>
             </div>
           </TabsContent>

@@ -87,26 +87,13 @@ export default function SandboxContainer() {
 
   return (
     <div className={cn(
-      "flex flex-col h-full bg-[#050505] overflow-hidden transition-all duration-500",
-      isFullscreen ? "fixed inset-0 z-[100] p-6 bg-black/90 backdrop-blur-3xl" : "relative"
+      "ide-panel h-full flex flex-col overflow-hidden transition-all duration-500",
+      isFullscreen ? "fixed inset-0 z-[100] p-8 bg-black/95 backdrop-blur-3xl" : "relative"
     )}>
-      {/* Sandbox Header */}
-      <div className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#09090b]/80 backdrop-blur-xl shrink-0">
+      {/* 👁️ MINIMAL PREVIEW HEADER */}
+      <div className="h-14 border-b border-white/5 flex items-center justify-between px-8 bg-[#050505]/80 backdrop-blur-xl shrink-0">
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-3">
-            <div className={cn(
-              "w-2 h-2 rounded-full transition-all duration-500",
-              isCompiling ? "bg-blue-500 animate-ping" : "bg-green-500 shadow-[0_0_10px_rgba(34,197,94,0.5)]"
-            )} />
-            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest font-outfit">
-              {isCompiling ? "Compiling VFS..." : "Runtime Online"}
-            </span>
-          </div>
-
-          <div className="h-4 w-[1px] bg-white/10" />
-
-          {/* Device Controls */}
-          <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+          <div className="flex bg-white/5 p-1 rounded-xl border border-white/5 shadow-inner">
             {[
               { id: 'mobile', icon: Smartphone },
               { id: 'tablet', icon: Tablet },
@@ -117,128 +104,104 @@ export default function SandboxContainer() {
                 onClick={() => setDeviceMode(mode.id as DeviceMode)}
                 className={cn(
                   "p-2 rounded-lg transition-all",
-                  deviceMode === mode.id ? "bg-white/10 text-blue-400 shadow-xl" : "text-zinc-600 hover:text-zinc-400"
+                  deviceMode === mode.id ? "bg-white/10 text-white shadow-xl" : "text-zinc-700 hover:text-zinc-400"
                 )}
               >
-                <mode.icon className="w-4 h-4" />
+                <mode.icon className="w-3.5 h-3.5" />
               </button>
             ))}
+          </div>
+          
+          <div className="h-4 w-[1px] bg-white/5" />
+          
+          <div className="flex items-center gap-3 px-3 py-1 rounded-full bg-blue-500/5 border border-blue-500/10">
+            <div className={cn("w-1.5 h-1.5 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)]", isCompiling ? "bg-blue-500 animate-pulse" : "bg-blue-500")} />
+            <span className="text-[9px] font-black text-blue-500 uppercase tracking-widest">
+              {isCompiling ? "Syncing..." : "Live Runtime"}
+            </span>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <button 
             onClick={handleRefresh}
-            className="p-2 hover:bg-white/5 rounded-xl text-zinc-500 hover:text-blue-400 transition-all"
-            title="Hard Refresh Runtime"
+            className="p-2 hover:bg-white/5 rounded-xl text-zinc-700 hover:text-white transition-all"
+            title="Refresh Runtime"
           >
-            <RefreshCcw className={cn("w-4 h-4", isCompiling && "animate-spin")} />
+            <RefreshCcw size={14} className={cn(isCompiling && "animate-spin")} />
           </button>
           
           <button 
             onClick={() => activeWorkspace && exportProjectAsZip(activeWorkspace.name, sandboxFiles)}
-            className="p-2 hover:bg-white/5 rounded-xl text-zinc-500 hover:text-zinc-200 transition-all"
+            className="p-2 hover:bg-white/5 rounded-xl text-zinc-700 hover:text-white transition-all"
           >
-            <Download className="w-4 h-4" />
+            <Download size={14} />
           </button>
-          
-          <div className="h-4 w-[1px] bg-white/10" />
           
           <button
             onClick={() => setIsFullscreen(!isFullscreen)}
             className={cn(
               "p-2 rounded-xl transition-all",
-              isFullscreen ? "bg-blue-600 text-white shadow-lg" : "hover:bg-white/5 text-zinc-500"
+              isFullscreen ? "bg-white text-black shadow-lg" : "hover:bg-white/5 text-zinc-700 hover:text-white"
             )}
           >
-            <Maximize2 className="w-4 h-4" />
+            <Maximize2 size={14} />
           </button>
         </div>
       </div>
 
-      {/* Main Sandbox Area */}
-      <div className="flex-1 overflow-hidden relative">
+      {/* PREVIEW VIEWPORT */}
+      <div className="flex-1 overflow-hidden relative bg-[#0a0a0a] flex items-center justify-center p-6 lg:p-12">
         {sandboxFiles.length > 0 ? (
           <SandpackProvider 
             key={key}
             template={template as any} 
             theme="dark" 
             files={sandpackFiles}
-            options={{
-              classes: {
-                "sp-layout": "h-full rounded-none border-none bg-transparent",
-                "sp-wrapper": "h-full",
-              }
-            }}
           >
-            <SandpackLayout style={{ height: '100%', background: 'transparent', border: 'none' }}>
-              <div className="flex h-full w-full relative">
-                <div className="hidden lg:block w-48 border-r border-white/5">
-                  <SandpackFileExplorer />
-                </div>
-                
-                <div className="flex-1 h-full bg-[#050505] relative flex items-center justify-center p-4 md:p-8 overflow-hidden">
-                  <div 
-                    className={cn(
-                      "bg-white shadow-[0_0_100px_rgba(0,0,0,0.8)] transition-all duration-700 ease-in-out rounded-2xl overflow-hidden border border-white/5 relative",
-                      isCompiling && "opacity-50 grayscale scale-[0.98]"
-                    )}
-                    style={{ 
-                      width: getViewportWidth(),
-                      height: '100%',
-                      maxWidth: '100%'
-                    }}
-                  >
-                    <SandpackPreview 
-                      showOpenInCodeSandbox={false}
-                      showRefreshButton={true}
-                      style={{ height: '100%', border: 'none' }}
-                    />
+            <SandpackLayout style={{ height: '100%', background: 'transparent', border: 'none', width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <div 
+                className={cn(
+                  "bg-white shadow-[0_40px_100px_rgba(0,0,0,0.8)] transition-all duration-700 ease-in-out rounded-3xl overflow-hidden border border-white/10 relative",
+                  isCompiling && "opacity-40 grayscale scale-[0.98]"
+                )}
+                style={{ 
+                  width: getViewportWidth(),
+                  height: '100%',
+                  maxWidth: '100%'
+                }}
+              >
+                <SandpackPreview 
+                  showOpenInCodeSandbox={false}
+                  showRefreshButton={false}
+                  style={{ height: '100%', border: 'none' }}
+                />
 
-                    <AnimatePresence>
-                      {isCompiling && (
-                        <div className="absolute inset-0 bg-[#050505]/60 backdrop-blur-sm flex flex-col items-center justify-center z-50">
-                          <Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />
-                          <span className="text-[10px] font-bold text-white uppercase tracking-widest animate-pulse">
-                            Injecting Atomic Codebase...
-                          </span>
-                        </div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                </div>
+                <AnimatePresence>
+                  {isCompiling && (
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] flex flex-col items-center justify-center z-50">
+                      <div className="w-12 h-12 rounded-2xl bg-black/80 flex items-center justify-center shadow-2xl border border-white/5">
+                        <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+                      </div>
+                    </div>
+                  )}
+                </AnimatePresence>
               </div>
             </SandpackLayout>
           </SandpackProvider>
         ) : (
-          <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
-            <div className="w-20 h-20 rounded-[2.5rem] bg-white/[0.02] border border-white/5 flex items-center justify-center animate-pulse">
-              <Terminal className="w-10 h-10 text-zinc-800" />
+          <div className="flex flex-col items-center justify-center text-center space-y-6">
+            <div className="w-20 h-20 rounded-[3rem] bg-white/[0.02] border border-white/5 flex items-center justify-center animate-pulse">
+              <Globe className="w-10 h-10 text-zinc-800" />
             </div>
-            <div className="space-y-2">
-              <h3 className="text-xl font-bold text-white font-outfit uppercase tracking-tighter">Workspace Static</h3>
-              <p className="text-zinc-600 text-sm font-medium">Initialize production engine to start preview.</p>
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-white uppercase tracking-widest">Awaiting Production</h3>
+              <p className="text-zinc-600 text-[10px] font-bold uppercase tracking-widest">Initialize prompt to start preview.</p>
             </div>
           </div>
         )}
       </div>
-
-      {/* Infrastructure Status Footer */}
-      <footer className="h-10 border-t border-white/5 bg-[#09090b]/80 backdrop-blur-xl flex items-center justify-between px-6 shrink-0">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-500 uppercase tracking-widest">
-            <Activity className={cn("w-3 h-3 text-blue-500", isCompiling && "animate-pulse")} />
-            VFS Sync: {sandboxFiles.length} files
-          </div>
-          <div className="h-3 w-[1px] bg-white/10" />
-          <div className="text-[9px] font-bold text-green-500 uppercase tracking-widest">
-            HMR Active
-          </div>
-        </div>
-        <div className="flex items-center gap-2 text-[9px] font-bold text-zinc-600 uppercase tracking-widest">
-          Node: bestlink-runtime-v2
-        </div>
-      </footer>
     </div>
   );
+}
 }

@@ -229,36 +229,46 @@ export default function ChatInterface() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   return (
-    <div className="h-full flex flex-col bg-[#050505] relative overflow-hidden">
-      {/* GLASS TOPBAR */}
-      <header className="h-14 border-b border-white/5 flex items-center justify-between px-6 bg-[#09090b]/50 shrink-0">
-        <div className="flex items-center gap-4">
+    <div className="flex-1 flex flex-col bg-[#050505] relative overflow-hidden selection:bg-blue-500/30">
+      {/* 🏁 MINIMAL STATUS BAR */}
+      <div className="h-14 flex items-center justify-between px-8 border-b border-white/5 bg-[#050505]/80 backdrop-blur-md shrink-0 z-40">
+        <div className="flex items-center gap-6">
           <ModelSelector />
-          <div className="h-4 w-[1px] bg-white/10" />
-          <div className="flex items-center gap-2">
-            <Shield className="w-3.5 h-3.5 text-blue-500" />
-            <span className="text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Production Studio</span>
+          <div className="h-4 w-[1px] bg-white/5" />
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-2 h-2 rounded-full shadow-[0_0_8px_rgba(37,99,235,0.4)] transition-all duration-500",
+              isLoading ? "bg-blue-500 animate-pulse" : (attachments.length > 0 ? "bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" : "bg-emerald-500")
+            )} />
+            <span className={cn(
+                "text-[9px] font-black uppercase tracking-[0.3em] transition-colors",
+                attachments.length > 0 ? "text-amber-500" : "text-white/30"
+            )}>
+              {isLoading ? "Production Engine: Active" : (attachments.length > 0 ? "Visual Synthesis Engine: Primed" : "Creation Engine: Ready")}
+            </span>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-           {isLoading && (
-             <button onClick={handleStop} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[9px] font-bold text-red-500 hover:bg-red-500/20 transition-all uppercase tracking-widest">
-                <StopCircle className="w-3 h-3" /> Halt
-             </button>
-           )}
-        </div>
-      </header>
+        
+        {isLoading && (
+          <button 
+            onClick={handleStop}
+            className="flex items-center gap-2 px-4 py-1.5 rounded-xl bg-red-500/10 border border-red-500/20 text-[9px] font-black text-red-500 hover:bg-red-500/20 transition-all uppercase tracking-[0.2em]"
+          >
+            <StopCircle className="w-3.5 h-3.5" /> Stop Build
+          </button>
+        )}
+      </div>
 
-      {/* INDEPENDENT SCROLL AREA */}
-      <div className="flex-1 overflow-y-auto px-6 py-8 custom-scrollbar relative">
-        <div className="max-w-3xl mx-auto space-y-10 pb-32">
+      {/* CHAT CONTENT */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 custom-scrollbar relative">
+        <div className="max-w-3xl mx-auto space-y-12 pb-32">
           
           <AnimatePresence>
             {isUploadOpen && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
                 className="mb-8"
               >
                 <ImageUpload 
@@ -269,36 +279,41 @@ export default function ChatInterface() {
               </motion.div>
             )}
 
-            {(isLoading || pipelineStage === 'EXECUTION_ERROR') && (
+            {isLoading && (
               <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="space-y-6"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center gap-4 p-6 rounded-[2rem] bg-white/[0.02] border border-white/5"
               >
-                <ExecutionProgress currentStage={pipelineStage} statusMessage={pipelineMessage} />
-                
-                {errorDetails && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="p-6 rounded-[1.5rem] bg-red-500/5 border border-red-500/20 flex items-start gap-4"
+                <div className="w-10 h-10 rounded-2xl bg-blue-500/10 flex items-center justify-center shrink-0">
+                  <Loader2 className="w-5 h-5 text-blue-500 animate-spin" />
+                </div>
+                <div className="space-y-1">
+                  <p className="text-[10px] font-bold text-blue-500 uppercase tracking-widest">Processing Production Prompt</p>
+                  <p className="text-[11px] text-zinc-500 font-medium italic">{pipelineMessage || "Building your vision..."}</p>
+                </div>
+              </motion.div>
+            )}
+
+            {errorDetails && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-6 rounded-[2rem] bg-red-500/5 border border-red-500/20 flex items-start gap-4"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-red-500/10 flex items-center justify-center shrink-0">
+                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                </div>
+                <div className="space-y-1">
+                  <h4 className="text-[10px] font-bold text-red-500 uppercase tracking-widest">Production Error</h4>
+                  <p className="text-[11px] text-zinc-400 font-medium leading-relaxed">{errorDetails}</p>
+                  <button 
+                    onClick={() => handlePipeline(currentChat?.messages[currentChat.messages.length - 2]?.content || "", currentChatId!, [])}
+                    className="mt-3 text-[10px] font-bold text-white bg-red-500/20 px-4 py-2 rounded-xl hover:bg-red-500/30 transition-all uppercase tracking-widest"
                   >
-                    <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center shrink-0">
-                      <AlertTriangle className="w-5 h-5 text-red-500" />
-                    </div>
-                    <div className="space-y-1">
-                      <h4 className="text-xs font-bold text-red-500 uppercase tracking-widest">System Incident</h4>
-                      <p className="text-[11px] text-zinc-400 font-medium leading-relaxed">{errorDetails}</p>
-                      <button 
-                        onClick={() => handlePipeline(currentChat?.messages[currentChat.messages.length - 2]?.content || "", currentChatId!, [])}
-                        className="mt-3 flex items-center gap-2 text-[10px] font-bold text-white bg-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/30 transition-all uppercase tracking-widest"
-                      >
-                        <RefreshCcw className="w-3 h-3" /> Retry Generation
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
+                    Retry Generation
+                  </button>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
@@ -306,39 +321,40 @@ export default function ChatInterface() {
           {currentChat && currentChat.messages.length > 0 ? (
             <MessageList messages={currentChat.messages} isLoading={isLoading} />
           ) : (
-            <div className="py-20 flex flex-col items-center justify-center text-center space-y-12">
+            <div className="py-24 flex flex-col items-center justify-center text-center space-y-16 animate-panel">
               <motion.div
-                initial={{ scale: 0.8, opacity: 0 }}
+                initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                className="w-24 h-24 rounded-[2.5rem] bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center shadow-2xl shadow-blue-500/30 relative group"
+                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+                className="w-24 h-24 rounded-[2.5rem] bg-white flex items-center justify-center shadow-[0_0_100px_rgba(255,255,255,0.1)] relative group"
               >
-                <div className="absolute inset-0 bg-blue-400 blur-2xl opacity-20 group-hover:opacity-40 transition-opacity" />
-                <Zap className="w-12 h-12 text-white fill-current relative z-10" />
+                <Zap className="w-10 h-10 text-black fill-current relative z-10" />
+                <div className="absolute inset-0 bg-white blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" />
               </motion.div>
               
               <div className="space-y-4 max-w-lg mx-auto">
-                <h1 className="text-5xl font-bold text-white font-outfit tracking-tighter leading-none text-balance">
-                  Elite AI Production <span className="text-blue-500">v2.0</span>
+                <h1 className="text-6xl font-black text-white tracking-tighter leading-none italic uppercase">
+                  Bestlink.OS
                 </h1>
-                <p className="text-zinc-500 text-lg font-medium leading-relaxed">
-                  Generate award-winning websites and web apps with a single production prompt.
+                <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.5em] ml-2">
+                  Elite Production Engine v2.4
                 </p>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 w-full">
+              <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
                 {[
-                  { q: "Luxury real estate landing page", icon: Box },
-                  { q: "AI agency website with glassmorphism", icon: Layout },
-                  { q: "Modern SaaS dashboard", icon: Cpu },
-                  { q: "Creative portfolio for designer", icon: Activity }
+                  { q: "LUXURY REAL ESTATE PORTFOLIO", icon: Box },
+                  { q: "FINTECH DASHBOARD ARCHITECTURE", icon: Cpu },
+                  { q: "MODERN AI SAAS INTERFACE", icon: Layout },
+                  { q: "MINIMALIST AGENCY LANDING", icon: Activity }
                 ].map((item) => (
                   <button
                     key={item.q}
                     onClick={() => setInput(item.q)}
-                    className="p-5 text-left rounded-[1.5rem] bg-white/[0.02] border border-white/5 hover:bg-white/[0.05] hover:border-white/10 transition-all group flex items-start gap-4"
+                    className="p-6 text-left rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all group flex items-start gap-4 active:scale-[0.98]"
                   >
-                    <item.icon className="w-5 h-5 text-zinc-600 group-hover:text-blue-400 transition-colors mt-0.5" />
-                    <p className="text-xs font-bold text-zinc-400 group-hover:text-white transition-colors">{item.q}</p>
+                    <item.icon className="w-4 h-4 text-white/10 group-hover:text-white transition-colors mt-0.5" />
+                    <p className="text-[9px] font-black text-white/30 group-hover:text-white transition-colors uppercase tracking-[0.2em] leading-relaxed">{item.q}</p>
                   </button>
                 ))}
               </div>
@@ -347,53 +363,58 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      {/* STICKY INPUT BAR */}
-      <div className="p-6 bg-gradient-to-t from-[#050505] via-[#050505] to-transparent shrink-0">
-        <div className="max-w-3xl mx-auto relative group">
-          <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
-          <div className="relative bg-[#09090b] border border-white/10 rounded-[2.5rem] overflow-hidden focus-within:border-white/20 transition-all shadow-2xl">
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-              placeholder="Describe your production request... (e.g., 'Modern SaaS landing page')"
-              className="w-full bg-transparent border-none outline-none py-6 px-10 text-sm text-zinc-200 placeholder:text-zinc-600 resize-none max-h-[200px] custom-scrollbar"
-            />
-            
-            <div className="flex items-center justify-between px-8 pb-5">
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setIsUploadOpen(!isUploadOpen)}
+      {/* FLOATING COMMAND BAR (RAYCAST INSPIRED) */}
+      <div className="absolute bottom-10 inset-x-0 px-6 z-50">
+        <div className="max-w-3xl mx-auto">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
+            <div className="relative bg-[#09090b]/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden focus-within:border-white/20 transition-all shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={input}
+                onChange={(e) => setInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    handleSend();
+                  }
+                }}
+                placeholder="describe your vision..."
+                className="w-full bg-transparent border-none outline-none py-7 px-10 text-sm text-zinc-100 placeholder:text-zinc-700 resize-none max-h-[200px] custom-scrollbar"
+              />
+              
+              <div className="flex items-center justify-between px-8 pb-6">
+                <div className="flex items-center gap-5">
+                  <button 
+                    onClick={() => setIsUploadOpen(!isUploadOpen)}
+                    className={cn(
+                      "p-2.5 rounded-2xl transition-all border",
+                      isUploadOpen ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "hover:bg-white/5 text-zinc-600 hover:text-zinc-400 border-transparent hover:border-white/5"
+                    )}
+                  >
+                    <Paperclip className="w-5 h-5" />
+                  </button>
+                  <div className="h-4 w-[1px] bg-white/5" />
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-1.5 h-1.5 rounded-full", isLoading ? "bg-blue-500 animate-pulse" : "bg-zinc-800")} />
+                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em]">production engine ready</span>
+                  </div>
+                </div>
+                
+                <button
+                  onClick={handleSend}
+                  disabled={!input.trim() || isLoading}
                   className={cn(
-                    "p-2.5 rounded-2xl transition-all border",
-                    isUploadOpen ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "hover:bg-white/5 text-zinc-600 hover:text-zinc-400 border-transparent hover:border-white/5"
+                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-95",
+                    !input.trim() || isLoading 
+                      ? "bg-zinc-900 text-zinc-700" 
+                      : "bg-white text-black hover:scale-105"
                   )}
                 >
-                  <Paperclip className="w-5 h-5" />
+                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
                 </button>
-                <div className="h-4 w-[1px] bg-white/5" />
-                <span className="text-[10px] font-bold text-zinc-700 uppercase tracking-widest">Production Studio v2.0 Stable</span>
               </div>
-              
-              <button
-                onClick={handleSend}
-                disabled={!input.trim() || isLoading}
-                className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-95",
-                  !input.trim() || isLoading 
-                    ? "bg-zinc-900 text-zinc-700" 
-                    : "bg-white text-black hover:scale-105"
-                )}
-              >
-                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
-              </button>
             </div>
           </div>
         </div>

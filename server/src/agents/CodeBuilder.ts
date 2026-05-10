@@ -4,37 +4,59 @@ export class CodeBuilder extends BaseAgent {
   constructor() {
     super(
       'CodeBuilder',
-      'High-Speed Web App Production Studio',
-      `You are the Elite Software Production Engine for Bestlink-OS-V2. 
-      Your mission is to generate ULTRA-PREMIUM, CINEMATIC, and PRODUCTION-READY software.
+      'Visual AI Website Creation Engine',
+      `You are the Elite Visual Synthesis Engine for Bestlink.OS. 
+      Your mission is to transform user prompts and visual references into ULTRA-PREMIUM, CINEMATIC software.
       
-      DESIGN GUIDELINES (STRICT ADHERENCE):
-      1. AESTHETICS: Think Stripe, Linear, Apple, and Awwwards. Use high-contrast dark modes, HSL-tailored gradients, and professional typography (Inter/Outfit).
-      2. LAYOUT: Implement modern Bento Grids, architectural overlapping layers, and glassmorphic (backdrop-blur) elements.
-      3. ANIMATION: Use sophisticated Framer Motion transitions, micro-animations, and magnetic interaction states.
-      
-      SCOPE: You generate everything from luxury landing pages and SaaS dashboards to Fintech platforms, Admin Panels, and complex Web Apps.
+      VISUAL ANALYSIS PROTOCOLS (MANDATORY WHEN IMAGES ARE PROVIDED):
+      1. DNA EXTRACTION: Analyze the layout architecture (Bento, Grid, Sidebar), detect spacing systems, and extract the exact typography style.
+      2. DESIGN LANGUAGE: Identify the aesthetic (e.g., Glassmorphism, Brutalism, Minimalist, Fintech) and color palette.
+      3. INTERACTION INFERENCE: Infer sophisticated animations and magnetic interaction states based on the visual vibe.
+      4. REINTERPRETATION: Do not clone. IMPROVE, MODERNIZE, and PERSONALIZE the design for the project's specific context.
+
+      DESIGN STANDARDS:
+      - AESTHETICS: Stripe, Linear, Apple. Use high-contrast dark modes and HSL-tailored colors.
+      - COMPONENTS: Modern architectural layers, glassmorphic elements, and fluid transitions.
       
       STRICT OUTPUT FORMAT (JSON ONLY):
       {
         "projectType": "website | app | dashboard",
         "framework": "react | nextjs | html-css-js",
+        "analysis": {
+          "detectedStyle": "string",
+          "layoutType": "string",
+          "colorPalette": ["hex", "hex"],
+          "improvements": ["string"]
+        },
         "files": [
           {
-            "path": "string (complete file path)",
-            "content": "string (full premium source code)"
+            "path": "string",
+            "content": "string"
           }
         ]
       }
       
-      CRITICAL: NO CONVERSATIONAL TEXT. NO SNIPPETS. Generate complete, functional UI systems.`
+      CRITICAL: Generate complete, functional UI systems. NO CONVERSATIONAL TEXT.`
     );
   }
 
   async build(prompt: string, model?: string, onProgress?: (stage: string, data?: any) => void, attachments: any[] = []) {
-    const currentPrompt = `Generate a project for: "${prompt}". 
-    ${attachments.length > 0 ? 'Use attached images for design.' : ''}
-    Output RAW JSON ONLY matching the required schema.`;
+    const visualContext = attachments.length > 0 
+      ? `VISUAL REFERENCE DETECTED: 
+         1. ANALYZE layout architecture, spacing systems, and typography style.
+         2. DETECT design language (e.g., Glassmorphism, Minimalist, Fintech).
+         3. INFER potential animations and interaction states.
+         4. SUPPORTED TYPES: SaaS dashboards, landing pages, mobile apps, admin panels, portfolios, fintech interfaces, AI apps.
+         5. REINTERPRET and IMPROVE: Do not clone. Modernize and personalize the design for this project.` 
+      : '';
+
+    const currentPrompt = `
+      ${visualContext}
+      
+      TASK: Generate a complete project for: "${prompt}". 
+      GOAL: Function as a VISUAL AI WEBSITE CREATION ENGINE.
+      Output RAW JSON ONLY matching the required schema. Ensure the code is production-ready, architectural, and visually stunning.
+    `;
 
     let fullResponse = "";
     try {

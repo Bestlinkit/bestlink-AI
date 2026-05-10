@@ -63,6 +63,20 @@ function MessageItem({ message }: { message: Message }) {
         "flex flex-col gap-3 min-w-0 flex-1",
         isAssistant ? "items-start" : "items-end"
       )}>
+        {message.attachments && message.attachments.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {message.attachments.map((file, idx) => (
+              <div key={idx} className="relative group w-48 rounded-xl overflow-hidden border border-white/10 shadow-2xl">
+                <img src={file.path} alt="Reference" className="w-full object-cover aspect-video opacity-80 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded-md border border-white/10 flex items-center gap-1.5">
+                    <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                    <span className="text-[8px] font-black text-white/70 uppercase tracking-widest">Visual DNA</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {isGeneration ? (
           <div className="w-full p-6 rounded-[2rem] bg-white/[0.02] border border-white/5 shadow-2xl relative overflow-hidden group/card">
             <div className="absolute inset-0 bg-blue-500/5 blur-3xl opacity-0 group-hover/card:opacity-100 transition-opacity" />

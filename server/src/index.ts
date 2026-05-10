@@ -46,13 +46,18 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'online', uptime: process.uptime() });
 });
 
-// 🤖 Elite AI Prompt Engine Endpoint
+// 🤖 Elite AI Prompt Engine Endpoint (STREAMING)
 app.post('/api/chat', async (req, res) => {
   const { text, image, url, history = [], model: requestedModel } = req.body;
 
   if (!text && !image && history.length === 0) {
     return res.status(400).json({ error: 'Message or History is required' });
   }
+
+  // Set headers for SSE
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
 
   try {
     const messages: any[] = [
@@ -62,41 +67,43 @@ app.post('/api/chat', async (req, res) => {
 
     if (text || image) {
       let promptContent: any[] = [{ type: 'text', text: text || 'Please analyze this.' }];
-
-      if (url) {
-        promptContent[0].text += `\n\nURL Context: ${url}`;
-      }
-
+      if (url) promptContent[0].text += `\n\nURL Context: ${url}`;
       if (image) {
         promptContent.push({
           type: 'image_url',
-          image_url: {
-            url: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
-          }
+          image_url: { url: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}` }
         });
       }
-
       messages.push({ role: 'user', content: promptContent });
     }
 
-    // Model Routing Logic
     const modelMap: Record<string, string> = {
       'deepseek': 'deepseek/deepseek-chat',
       'qwen': 'qwen/qwen-2.5-72b-instruct',
-      'glm': 'google/gemini-2.0-flash-exp:free', // Using Gemini as proxy for GLM/General
+      'glm': 'google/gemini-2.0-flash-exp:free',
       'claude': 'anthropic/claude-3-haiku',
       'gemini': 'google/gemini-2.0-flash-exp:free'
     };
 
     const finalModel = modelMap[requestedModel?.toLowerCase()] || 'google/gemini-2.0-flash-exp:free';
     
-    console.log(`[Elite Engine] Routing to: ${finalModel}`);
-    const reply = await openRouterService.chat(messages, finalModel, { max_tokens: 8000 });
+    console.log(`[Elite Engine] Streaming from: ${finalModel}`);
 
-    res.json({ reply });
+    // Use OpenRouter streaming
+    const stream = await openRouterService.streamChat(messages, finalModel, { max_tokens: 8000 });
+
+    for await (const chunk of stream) {
+      if (chunk) {
+        res.write(`data: ${JSON.stringify({ reply: chunk })}\n\n`);
+      }
+    }
+
+    res.write('data: [DONE]\n\n');
+    res.end();
   } catch (error: any) {
     console.error('[Elite Engine Error]:', error.message);
-    res.status(500).json({ error: 'Assistant logic failed. Please try a different model.' });
+    res.write(`data: ${JSON.stringify({ error: 'Generation interrupted.' })}\n\n`);
+    res.end();
   }
 });
 

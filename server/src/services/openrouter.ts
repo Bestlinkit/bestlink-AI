@@ -7,111 +7,19 @@ dotenv.config();
 const OPENROUTER_API_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
 export const openRouterService = {
-  async streamChat(
+  async *streamChat(
     messages: any[],
-    model: string = 'openrouter/free',
-    options: any = {},
-    onChunk: (chunk: any) => void
-  ): Promise<void> {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
-      throw new Error('OPENROUTER_API_KEY is not set');
-    }
-
-    // Attempt streaming with the selected model
-    try {
-      await this.executeRequest(messages, model, options, apiKey, onChunk);
-    } catch (error: any) {
-      console.warn(`Model ${model} failed, attempting fallback...`, error.message);
-      
-      // Fallback logic
-      for (const fallbackModel of FALLBACK_ORDER) {
-        if (fallbackModel === model) continue;
-        
-        try {
-          console.log(`Trying fallback model: ${fallbackModel}`);
-          await this.executeRequest(messages, fallbackModel, options, apiKey, onChunk);
-          return; // Success!
-        } catch (fallbackError: any) {
-          console.warn(`Fallback model ${fallbackModel} also failed:`, fallbackError.message);
-        }
-      }
-      
-      throw new Error('All available AI models failed to respond. Please try again later.');
-    }
-  },
-
-  async chat(
-    messages: any[],
-    model: string = 'openrouter/free',
+    model: string = 'google/gemini-2.0-flash-exp:free',
     options: any = {}
-  ): Promise<string> {
+  ): AsyncIterable<string> {
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
 
     const modelsToTry = [model, ...FALLBACK_ORDER.filter(m => m !== model)];
-    let lastError = null;
-
+    
     for (const currentModel of modelsToTry) {
       try {
-        console.log(`[OpenRouter] Attempting request with: ${currentModel}`);
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 180000);
-
-        const response = await fetch(OPENROUTER_API_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${apiKey}`,
-            'HTTP-Referer': 'https://bestlink-digital-ai.local',
-            'X-Title': 'Bestlink Digital AI',
-          },
-          body: JSON.stringify({
-            model: currentModel,
-            messages,
-            temperature: options.temperature ?? 0.7,
-            max_tokens: options.max_tokens ?? 8000, // Increase max tokens for building
-          }),
-          signal: controller.signal
-        });
-
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `API Error ${response.status}`);
-        }
-
-        const data = await response.json();
-        const content = data.choices?.[0]?.message?.content || "";
-        if (!content) throw new Error("Empty response from AI");
-        
-        return content;
-      } catch (err: any) {
-        lastError = err;
-        console.warn(`[OpenRouter] Model ${currentModel} failed: ${err.message}. Retrying...`);
-      }
-    }
-
-    throw lastError || new Error('All models failed to respond.');
-  },
-
-  async *streamChatGenerator(
-    messages: any[],
-    model: string = 'openrouter/free',
-    options: any = {}
-  ): AsyncGenerator<any> {
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
-
-    let currentModel = model;
-    let fallbackIndex = 0;
-
-    while (true) {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s max timeout
-
-      try {
+        console.log(`[OpenRouter] Streaming with: ${currentModel}`);
         const response = await fetch(OPENROUTER_API_URL, {
           method: 'POST',
           headers: {
@@ -125,119 +33,87 @@ export const openRouterService = {
             messages,
             stream: true,
             temperature: options.temperature ?? 0.7,
-            max_tokens: options.max_tokens ?? 4000,
+            max_tokens: options.max_tokens ?? 8000,
           }),
-          signal: controller.signal
         });
 
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error?.message || `API Error ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`API Error ${response.status}`);
 
         const reader = response.body?.getReader();
         if (!reader) throw new Error('Response body is null');
 
         const decoder = new TextDecoder();
+        let buffer = '';
+
         while (true) {
           const { done, value } = await reader.read();
-          if (done) return; // Exit generator when done successfully
+          if (done) break;
 
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split('\n');
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
 
           for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              if (data === '[DONE]') continue;
-              try {
-                const parsed = JSON.parse(data);
-                yield parsed;
-              } catch (e) {}
-            }
-          }
-        }
-      } catch (error: any) {
-        clearTimeout(timeoutId);
-        console.warn(`Model ${currentModel} failed:`, error.message);
-        if (fallbackIndex < FALLBACK_ORDER.length) {
-          currentModel = FALLBACK_ORDER[fallbackIndex];
-          console.log(`Retrying with fallback model: ${currentModel}`);
-          fallbackIndex++;
-        } else {
-          throw new Error('All available AI models failed to respond. Please try again later.');
-        }
-      }
-    }
-
-  },
-
-  async executeRequest(
-    messages: any[],
-    model: string,
-    options: any,
-    apiKey: string,
-    onChunk: (chunk: any) => void
-  ) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 60000);
-
-    try {
-      const response = await fetch(OPENROUTER_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-          'HTTP-Referer': 'https://bestlink-digital-ai.local',
-          'X-Title': 'Bestlink Digital AI',
-        },
-        body: JSON.stringify({
-          model,
-          messages,
-          stream: true,
-          temperature: options.temperature ?? 0.7,
-          max_tokens: options.max_tokens ?? 4000,
-        }),
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.error?.message || `API Error ${response.status}`);
-      }
-
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Response body is null');
-
-
-      const decoder = new TextDecoder();
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const data = line.slice(6);
+            const trimmed = line.trim();
+            if (!trimmed || !trimmed.startsWith('data: ')) continue;
+            
+            const data = trimmed.slice(6);
             if (data === '[DONE]') continue;
+
             try {
               const parsed = JSON.parse(data);
-              onChunk(parsed);
+              const content = parsed.choices?.[0]?.delta?.content || "";
+              if (content) yield content;
             } catch (e) {
-              // Ignore incomplete chunks
+              // Ignore partial JSON
             }
           }
         }
+        return; // Success!
+      } catch (error: any) {
+        console.warn(`[OpenRouter] Stream failed for ${currentModel}:`, error.message);
+        continue; // Try next model
       }
-    } catch (error: any) {
-      clearTimeout(timeoutId);
-      throw error;
     }
+    throw new Error('All models failed to stream.');
+  },
+
+  async chat(
+    messages: any[],
+    model: string = 'google/gemini-2.0-flash-exp:free',
+    options: any = {}
+  ): Promise<string> {
+    const apiKey = process.env.OPENROUTER_API_KEY;
+    if (!apiKey) throw new Error('OPENROUTER_API_KEY is not set');
+
+    const modelsToTry = [model, ...FALLBACK_ORDER.filter(m => m !== model)];
+    
+    for (const currentModel of modelsToTry) {
+      try {
+        console.log(`[OpenRouter] Request with: ${currentModel}`);
+        const response = await fetch(OPENROUTER_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+            'HTTP-Referer': 'https://bestlink-digital-ai.local',
+            'X-Title': 'Bestlink Digital AI',
+          },
+          body: JSON.stringify({
+            model: currentModel,
+            messages,
+            temperature: options.temperature ?? 0.7,
+            max_tokens: options.max_tokens ?? 8000,
+          }),
+        });
+
+        if (!response.ok) throw new Error(`API Error ${response.status}`);
+        const data = await response.json();
+        return data.choices?.[0]?.message?.content || "";
+      } catch (error: any) {
+        console.warn(`[OpenRouter] Request failed for ${currentModel}:`, error.message);
+      }
+    }
+    throw new Error('All models failed.');
   }
 };

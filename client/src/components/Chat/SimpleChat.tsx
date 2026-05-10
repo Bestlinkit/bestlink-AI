@@ -117,39 +117,50 @@ export default function SimpleChat() {
         }),
       });
 
-      const contentType = res.headers.get("content-type");
-      let data;
-      
-      if (contentType && contentType.includes("application/json")) {
-        data = await res.json();
-      } else {
-        const rawText = await res.text();
-        if (rawText.includes('data: ')) {
-          const jsonStr = rawText.split('data: ')[1].split('\n')[0];
-          data = JSON.parse(jsonStr);
-        } else {
-          throw new Error("Invalid response from engine");
-        }
-      }
+      if (!res.ok) throw new Error("Failed to connect to engine");
 
-      if (data?.reply) {
-        addMessage(activeWorkspace?.chats[0]?.id || chatId, {
-          id: Math.random().toString(36).substring(7),
-          role: 'assistant',
-          content: data.reply,
-          timestamp: Date.now()
-        });
-      } else {
-        throw new Error(data?.error || "Empty response from engine");
+      // Initialize assistant message
+      const assistantMsgId = Math.random().toString(36).substring(7);
+      addMessage(activeWorkspace?.chats[0]?.id || chatId, {
+        id: assistantMsgId,
+        role: 'assistant',
+        content: "",
+        timestamp: Date.now()
+      });
+
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullContent = "";
+
+      if (!reader) throw new Error("Stream reader not available");
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value, { stream: true });
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const dataStr = line.slice(6);
+            if (dataStr === '[DONE]') continue;
+            try {
+              const data = JSON.parse(dataStr);
+              if (data.reply) {
+                fullContent += data.reply;
+                updateLastMessage(activeWorkspace?.chats[0]?.id || chatId, fullContent);
+              } else if (data.error) {
+                throw new Error(data.error);
+              }
+            } catch (e) {
+              // Ignore partial JSON
+            }
+          }
+        }
       }
     } catch (err: any) {
       console.error(err);
-      addMessage(activeWorkspace?.chats[0]?.id || chatId, {
-        id: Math.random().toString(36).substring(7),
-        role: 'assistant',
-        content: "### ⚠️ Engine Interruption\nI encountered a technical hiccup. Please refine your request or try a different model.",
-        timestamp: Date.now()
-      });
       toast.error("Generation failed");
     } finally {
       setIsLoading(false);

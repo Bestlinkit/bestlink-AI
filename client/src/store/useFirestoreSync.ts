@@ -26,7 +26,10 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
   useEffect(() => {
     // Phase 1: Guards
     if (!db || !isAuthReady) {
-      if (!db) setStatus('OFFLINE');
+      if (!db) {
+        setStatus('OFFLINE');
+        useAppStore.getState().setFirebaseStatus('OFFLINE');
+      }
       return;
     }
 
@@ -36,6 +39,7 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
     // 1. Initial Load & Presence Check
     const initLoad = async () => {
       setStatus('RECOVERING');
+      useAppStore.getState().setFirebaseStatus('DEGRADED');
       try {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -56,14 +60,17 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
           }
         }
         setStatus('ONLINE');
+        useAppStore.getState().setFirebaseStatus('ONLINE');
         consecutiveFailuresRef.current = 0;
       } catch (err: any) {
         console.error("[FirestoreSync] Initial load failed:", err);
         if (err.code === 'permission-denied') {
           setStatus('PERMISSION_DENIED');
+          useAppStore.getState().setFirebaseStatus('PERMISSION_DENIED');
           toast.error("Cloud Sync Permission Denied. Check infrastructure rules.");
         } else {
           setStatus('ERROR');
+          useAppStore.getState().setFirebaseStatus('OFFLINE');
         }
       }
     };

@@ -38,8 +38,36 @@ export default function Home() {
     createWorkspace, 
     setActiveWorkspace, 
     isSandboxOpen, 
-    setSandboxOpen 
+    setSandboxOpen,
+    backendStatus,
+    firebaseStatus,
+    engineStatus,
+    setBackendStatus
   } = useAppStore();
+
+  // Polling for Backend Status
+  useEffect(() => {
+    const checkBackend = async () => {
+      try {
+        const start = Date.now();
+        const res = await fetch('https://bestlink-digital-ai-backend.onrender.com/api/health');
+        if (res.ok) {
+          const latency = Date.now() - start;
+          // If latency is high, it might be waking up
+          if (latency > 2000) setBackendStatus('SLEEPING');
+          else setBackendStatus('ONLINE');
+        } else {
+          setBackendStatus('OFFLINE');
+        }
+      } catch (e) {
+        setBackendStatus('OFFLINE');
+      }
+    };
+
+    checkBackend();
+    const interval = setInterval(checkBackend, 30000); // Check every 30s
+    return () => clearInterval(interval);
+  }, [setBackendStatus]);
 
   // Initialize workspace if none exists
   useEffect(() => {
@@ -106,23 +134,40 @@ export default function Home() {
             
             <div className="h-4 w-[1px] bg-white/10" />
             
-            {/* FIRESTORE CONNECTION GUARD BADGE */}
-            <div className={cn(
-              "flex items-center gap-2 px-3 py-1 rounded-full border transition-all duration-500",
-              syncStatus === 'ONLINE' ? "bg-green-500/5 border-green-500/20 text-green-500" :
-              syncStatus === 'RECOVERING' ? "bg-blue-500/5 border-blue-500/20 text-blue-500 animate-pulse" :
-              syncStatus === 'OFFLINE' ? "bg-yellow-500/5 border-yellow-500/20 text-yellow-500" :
-              syncStatus === 'PERMISSION_DENIED' ? "bg-red-500/10 border-red-500/30 text-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]" :
-              "bg-red-500/5 border-red-500/20 text-red-500"
-            )}>
-              {syncStatus === 'ONLINE' ? <Wifi className="w-3 h-3" /> :
-               syncStatus === 'RECOVERING' ? <CloudLightning className="w-3 h-3" /> :
-               syncStatus === 'OFFLINE' ? <WifiOff className="w-3 h-3" /> :
-               syncStatus === 'PERMISSION_DENIED' ? <ShieldAlert className="w-3 h-3" /> :
-               <AlertCircle className="w-3 h-3" />}
-              <span className="text-[9px] font-bold uppercase tracking-widest">
-                {syncStatus?.replace('_', ' ')}
-              </span>
+            {/* INFRASTRUCTURE INDICATORS */}
+            <div className="flex items-center gap-3">
+              {/* BACKEND STATUS */}
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-500",
+                backendStatus === 'ONLINE' ? "bg-green-500/5 border-green-500/10 text-green-500" :
+                backendStatus === 'SLEEPING' ? "bg-blue-500/5 border-blue-500/10 text-blue-500 animate-pulse" :
+                "bg-red-500/5 border-red-500/10 text-red-500"
+              )}>
+                <Box className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase tracking-widest whitespace-nowrap">Backend: {backendStatus}</span>
+              </div>
+              
+              {/* FIREBASE STATUS */}
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-500",
+                firebaseStatus === 'ONLINE' ? "bg-green-500/5 border-green-500/10 text-green-500" :
+                firebaseStatus === 'DEGRADED' || firebaseStatus === 'PERMISSION_DENIED' ? "bg-yellow-500/5 border-yellow-500/10 text-yellow-500" :
+                "bg-red-500/5 border-red-500/10 text-red-500"
+              )}>
+                <Database className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase tracking-widest whitespace-nowrap">Firebase: {firebaseStatus}</span>
+              </div>
+
+              {/* ENGINE STATUS */}
+              <div className={cn(
+                "flex items-center gap-1.5 px-2.5 py-1 rounded-lg border transition-all duration-500",
+                engineStatus === 'READY' ? "bg-blue-500/5 border-blue-500/10 text-blue-400" :
+                engineStatus === 'WAITING' ? "bg-purple-500/5 border-purple-500/10 text-purple-400 animate-pulse" :
+                "bg-red-500/5 border-red-500/10 text-red-400"
+              )}>
+                <Cpu className="w-3 h-3" />
+                <span className="text-[8px] font-black uppercase tracking-widest whitespace-nowrap">Engine: {engineStatus}</span>
+              </div>
             </div>
           </div>
 

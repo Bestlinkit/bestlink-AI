@@ -14,8 +14,9 @@ export default function LandingPage({ onStart }: { onStart: () => void }) {
         <div className="absolute top-[20%] right-[15%] w-[40%] h-[40%] bg-cyan-600/5 blur-[100px] rounded-full" />
       </div>
 
-      {/* Grid Pattern */}
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 pointer-events-none" />
+      {/* Cinematic Overlays */}
+      <div className="absolute inset-0 bg-[#050505] pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/5 via-transparent to-purple-600/5 pointer-events-none" />
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
 
       {/* Navigation */}

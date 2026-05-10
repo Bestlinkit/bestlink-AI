@@ -81,6 +81,7 @@ export default function ChatInterface() {
     setErrorDetails(null);
 
     setIsLoading(true);
+    useAppStore.getState().setEngineStatus('WAITING');
     setPipelineStage('BUILD_START');
     setPipelineMessage("Initializing production matrix...");
     
@@ -89,10 +90,11 @@ export default function ChatInterface() {
     const watchdog = setTimeout(() => {
       if (isLoading) {
         handleStop();
-        setErrorDetails("The generation engine timed out (180s). This usually happens when the AI is processing a massive project. Please try again with a more specific prompt.");
-        toast.error("Pipeline timeout.");
+        setErrorDetails("Backend connection lost. The production engine timed out (30s). This ensures UI responsiveness during network instability.");
+        useAppStore.getState().setEngineStatus('FAILED');
+        toast.error("Pipeline connectivity lost.");
       }
-    }, 180000);
+    }, 30000);
 
     try {
       const response = await fetch(API_ENDPOINT, {
@@ -161,6 +163,7 @@ export default function ChatInterface() {
             if (stage === 'COMPLETED') {
               setIsLoading(false);
               setPipelineStage(null);
+              useAppStore.getState().setEngineStatus('READY');
             }
           } catch (e) {
             // Ignore partial JSON chunks
@@ -173,6 +176,7 @@ export default function ChatInterface() {
         setErrorDetails(error.message || "An unexpected engine failure occurred. Please check your network connection.");
         toast.error("Engine failure.");
         setPipelineStage('EXECUTION_ERROR');
+        useAppStore.getState().setEngineStatus('FAILED');
       }
     } finally {
       clearTimeout(watchdog);

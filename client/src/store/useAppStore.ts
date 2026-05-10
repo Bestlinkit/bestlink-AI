@@ -34,7 +34,19 @@ export interface Workspace {
   lastActive: number;
 }
 
+export type BackendStatus = 'ONLINE' | 'OFFLINE' | 'SLEEPING';
+export type FirebaseStatus = 'ONLINE' | 'DEGRADED' | 'OFFLINE' | 'PERMISSION_DENIED';
+export type EngineStatus = 'READY' | 'WAITING' | 'FAILED';
+
 interface AppState {
+  // Infrastructure Status
+  backendStatus: BackendStatus;
+  firebaseStatus: FirebaseStatus;
+  engineStatus: EngineStatus;
+  setBackendStatus: (status: BackendStatus) => void;
+  setFirebaseStatus: (status: FirebaseStatus) => void;
+  setEngineStatus: (status: EngineStatus) => void;
+
   // UI State
   isSidebarOpen: boolean;
   toggleSidebar: () => void;
@@ -78,6 +90,14 @@ const DEFAULT_FILES: SandboxFile[] = [
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
+      // Infrastructure Initial State
+      backendStatus: 'OFFLINE',
+      firebaseStatus: 'OFFLINE',
+      engineStatus: 'READY',
+      setBackendStatus: (status) => set({ backendStatus: status }),
+      setFirebaseStatus: (status) => set({ firebaseStatus: status }),
+      setEngineStatus: (status) => set({ engineStatus: status }),
+
       // UI Initial State
       isSidebarOpen: true,
       toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),

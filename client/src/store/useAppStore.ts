@@ -69,6 +69,8 @@ interface AppState {
   setSandboxOpen: (open: boolean) => void;
   model: string;
   setModel: (model: string) => void;
+  responseMode: 'creative' | 'architect' | 'engineer' | 'prompt' | 'dna';
+  setResponseMode: (mode: 'creative' | 'architect' | 'engineer' | 'prompt' | 'dna') => void;
   
   // Workspace State
   workspaces: Workspace[];
@@ -120,8 +122,10 @@ export const useAppStore = create<AppState>()(
       setTheme: (theme) => set({ theme }),
       isSandboxOpen: false,
       setSandboxOpen: (open) => set({ isSandboxOpen: open }),
-      model: "openrouter/free",
+      model: "gemini",
       setModel: (model) => set({ model }),
+      responseMode: 'creative',
+      setResponseMode: (mode) => set({ responseMode: mode }),
 
       // Workspace Initial State
       workspaces: [],

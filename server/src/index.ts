@@ -46,9 +46,26 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'online', uptime: process.uptime() });
 });
 
+// 🏷️ Auto-Title Generation
+app.post('/api/generate-title', async (req, res) => {
+  const { prompt } = req.body;
+  if (!prompt) return res.status(400).json({ error: 'Prompt is required' });
+
+  try {
+    const titlePrompt = [
+      { role: 'system', content: 'Generate a short professional project title from this request. Max 5 words. No quotes.' },
+      { role: 'user', content: prompt }
+    ];
+    const title = await openRouterService.chat(titlePrompt, 'google/gemini-2.0-flash-exp:free', { max_tokens: 20 });
+    res.json({ title: title.replace(/["']/g, '').trim() });
+  } catch (error) {
+    res.json({ title: 'New Creative Project' });
+  }
+});
+
 // 🤖 Elite AI Prompt Engine Endpoint (STREAMING)
 app.post('/api/chat', async (req, res) => {
-  const { text, image, url, history = [], model: requestedModel } = req.body;
+  const { text, image, url, history = [], model: requestedModel, projectMemory } = req.body;
 
   if (!text && !image && history.length === 0) {
     return res.status(400).json({ error: 'Message or History is required' });

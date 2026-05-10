@@ -95,10 +95,9 @@ app.post('/api/chat', async (req, res) => {
     }
 
     const modelMap: Record<string, string> = {
-      'deepseek': 'deepseek/deepseek-chat',
-      'qwen': 'qwen/qwen-2.5-72b-instruct',
-      'glm': 'google/gemini-2.0-flash-exp:free',
-      'claude': 'anthropic/claude-3-haiku',
+      'deepseek': 'deepseek/deepseek-chat:free',
+      'qwen': 'qwen/qwen-2.5-72b-instruct:free',
+      'claude': 'google/gemini-2.0-flash-exp:free',
       'gemini': 'google/gemini-2.0-flash-exp:free'
     };
 

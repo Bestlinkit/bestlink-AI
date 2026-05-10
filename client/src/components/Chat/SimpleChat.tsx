@@ -9,10 +9,10 @@ import { cn } from "@/lib/utils";
 import { useAppStore, Message } from "@/store/useAppStore";
 
 const MODELS = [
-  { id: 'gemini', name: 'Gemini 2.0 Flash', color: 'blue', description: 'Fast, multimodal analysis' },
-  { id: 'deepseek', name: 'DeepSeek Chat', color: 'purple', description: 'Advanced architecture & logic' },
-  { id: 'qwen', name: 'Qwen 2.5', color: 'green', description: 'Frontend & UI specialist' },
-  { id: 'claude', name: 'Claude Haiku', color: 'orange', description: 'UX reasoning & flow' },
+  { id: 'gemini', name: 'Gemini 2.0 (Free)', color: 'blue', description: 'Fast, multimodal analysis' },
+  { id: 'deepseek', name: 'DeepSeek Chat (Free)', color: 'purple', description: 'Advanced architecture & logic' },
+  { id: 'qwen', name: 'Qwen 2.5 (Free)', color: 'green', description: 'Frontend & UI specialist' },
+  { id: 'claude', name: 'Claude (Free Proxy)', color: 'orange', description: 'UX reasoning (via Gemini Free)' },
 ];
 
 const MODES = [

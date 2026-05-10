@@ -3,121 +3,65 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
-import multer from 'multer';
-import path from 'path';
 import { openRouterService } from './services/openrouter';
-import { pipelineService } from './services/pipeline';
-import rateLimit from 'express-rate-limit';
 
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 5000;
 
-// Middleware
-app.use(helmet({
-  crossOriginResourcePolicy: false,
-  crossOriginOpenerPolicy: false,
-}));
-
-app.use(cors({
-  origin: '*',
-  credentials: false
-}));
-
-app.options('*', cors());
-
+// 🛡️ Minimal Middleware
+app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(cors({ origin: '*' }));
 app.use(morgan('dev'));
-app.use(express.json());
+app.use(express.json({ limit: '50mb' })); // Allow large base64 images
 
-// Rate Limiting
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: { error: 'Too many requests, please try again later.' }
-});
-
-app.use('/api/chat', limiter);
-
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-
-// File Upload Setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, 'uploads/');
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + '-' + file.originalname);
-  }
-});
-const upload = multer({ storage });
-
-// Routes
+// 🏥 Health Check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    status: 'online', 
-    uptime: process.uptime() 
-  });
+  res.json({ status: 'online', uptime: process.uptime() });
 });
 
-// Chat Endpoint (Streaming)
+// 🤖 Minimal AI Assistant Endpoint
 app.post('/api/chat', async (req, res) => {
-  const { messages, model, options } = req.body;
-  
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
+  const { text, image, url } = req.body;
+
+  if (!text && !image) {
+    return res.status(400).json({ error: 'Text or Image is required' });
+  }
 
   try {
-    await openRouterService.streamChat(messages, model, options, (chunk) => {
-      res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-      (res as any).flush?.();
-    });
-    res.write('data: [DONE]\n\n');
-    res.end();
-  } catch (error) {
-    console.error('Chat error:', error);
-    res.write(`data: ${JSON.stringify({ error: 'Internal Server Error' })}\n\n`);
-    res.end();
+    const messages: any[] = [];
+    let promptContent: any[] = [{ type: 'text', text: text || 'Please analyze this image.' }];
+
+    // Handle URL as context
+    if (url) {
+      promptContent[0].text += `\n\nURL Context: ${url}`;
+    }
+
+    // Handle Image (Base64)
+    if (image) {
+      promptContent.push({
+        type: 'image_url',
+        image_url: {
+          url: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
+        }
+      });
+    }
+
+    messages.push({ role: 'user', content: promptContent });
+
+    // Use a robust multimodal model
+    const model = 'google/gemini-2.0-flash-exp:free';
+    const reply = await openRouterService.chat(messages, model, { max_tokens: 2000 });
+
+    res.json({ reply });
+  } catch (error: any) {
+    console.error('[API Error]:', error.message);
+    res.status(500).json({ reply: 'AI temporarily unavailable. Please try again.' });
   }
 });
 
-// File Upload Endpoint
-app.post('/api/upload', upload.array('files'), (req, res) => {
-  const protocol = req.protocol;
-  const host = req.get('host');
-  const baseUrl = process.env.PRODUCTION_URL || `${protocol}://${host}`;
-  
-  const files = req.files as Express.Multer.File[];
-  const fileData = files.map(file => ({
-    filename: file.filename,
-    originalName: file.originalname,
-    path: `${baseUrl}/uploads/${file.filename}`,
-    size: file.size,
-    mimetype: file.mimetype
-  }));
-  res.json({ files: fileData });
-});
-
-// Automated Project Generation Pipeline
-app.post('/api/pipeline', async (req, res) => {
-  const { prompt, attachments } = req.body;
-  
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
-  res.setHeader('Connection', 'keep-alive');
-
-  await pipelineService.runFullPipeline(prompt, (stage, data) => {
-    res.write(`data: ${JSON.stringify({ stage, data })}\n\n`);
-    (res as any).flush?.();
-  }, 'global', attachments);
-
-  res.write('data: [DONE]\n\n');
-  res.end();
-});
-
-// Start Server
+// 🚀 Start Server
 app.listen(port, () => {
-  const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
-  console.log(`AI Engine running at ${baseUrl}`);
+  console.log(`Minimal AI Engine running at http://localhost:${port}`);
 });

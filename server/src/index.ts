@@ -20,20 +20,20 @@ app.use(helmet({
 }));
 
 const allowedOrigins = [
-  'http://localhost:3000',
   'https://bestlink-digital-ai.web.app',
-  'https://bestlink-digital-ai.firebaseapp.com',
-  'https://bestlink-ai.web.app',
-  'https://bestlink-ai.firebaseapp.com',
+  'http://localhost:5173',
+  'http://localhost:3000',
   process.env.FRONTEND_URL
 ].filter(Boolean) as string[];
 
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept'],
+  methods: ['GET', 'POST', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
+
+app.options('*', cors());
 
 app.use(morgan('dev'));
 app.use(express.json());
@@ -62,7 +62,10 @@ const upload = multer({ storage });
 
 // Routes
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'Bestlink Digital AI Engine is running' });
+  res.json({ 
+    status: 'online', 
+    uptime: process.uptime() 
+  });
 });
 
 // Chat Endpoint (Streaming)

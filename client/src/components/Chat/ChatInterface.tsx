@@ -52,8 +52,12 @@ export default function ChatInterface() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   
-  // Use environment variable for API endpoint to support cross-origin production backends
-  const API_ENDPOINT = (process.env.NEXT_PUBLIC_API_URL || '') + '/api/pipeline';
+  // Use environment variable, or auto-detect localhost vs production
+  const API_ENDPOINT = process.env.NEXT_PUBLIC_API_URL 
+    ? `${process.env.NEXT_PUBLIC_API_URL}/api/pipeline` 
+    : (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
+        ? 'http://localhost:5000/api/pipeline' 
+        : '/api/pipeline');
 
   // Auto-resize textarea
   useEffect(() => {

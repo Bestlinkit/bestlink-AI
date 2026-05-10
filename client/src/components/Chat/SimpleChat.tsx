@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Send, Paperclip, Globe, Loader2, Image as ImageIcon, X, User, Sparkles, ArrowRight, ChevronDown, Plus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChatMarkdown } from "./ChatMarkdown";
 import ReactMarkdown from "react-markdown";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -278,7 +279,7 @@ export default function SimpleChat() {
                       ? "px-6 py-4 rounded-[2rem] bg-[#2f2f2f] text-white shadow-xl" 
                       : "prose prose-invert max-w-none prose-pre:bg-[#171717] prose-pre:border prose-pre:border-white/5 prose-code:text-blue-400"
                   )}>
-                    <ReactMarkdown>{msg.content}</ReactMarkdown>
+                    <ChatMarkdown content={msg.content} />
                   </div>
                 </div>
               </motion.div>

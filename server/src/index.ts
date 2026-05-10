@@ -91,7 +91,7 @@ app.post('/api/chat', async (req, res) => {
     const finalModel = modelMap[requestedModel?.toLowerCase()] || 'google/gemini-2.0-flash-exp:free';
     
     console.log(`[Elite Engine] Routing to: ${finalModel}`);
-    const reply = await openRouterService.chat(messages, finalModel, { max_tokens: 4000 });
+    const reply = await openRouterService.chat(messages, finalModel, { max_tokens: 8000 });
 
     res.json({ reply });
   } catch (error: any) {

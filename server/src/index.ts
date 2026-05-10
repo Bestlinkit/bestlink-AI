@@ -109,7 +109,7 @@ app.post('/api/upload', upload.array('files'), (req, res) => {
 
 // Automated Project Generation Pipeline
 app.post('/api/pipeline', async (req, res) => {
-  const { prompt } = req.body;
+  const { prompt, attachments } = req.body;
   
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -118,7 +118,7 @@ app.post('/api/pipeline', async (req, res) => {
   await pipelineService.runFullPipeline(prompt, (stage, data) => {
     res.write(`data: ${JSON.stringify({ stage, data })}\n\n`);
     (res as any).flush?.();
-  });
+  }, 'global', attachments);
 
   res.write('data: [DONE]\n\n');
   res.end();

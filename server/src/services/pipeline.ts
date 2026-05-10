@@ -20,7 +20,7 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, stageName: string): Pro
 };
 
 export const pipelineService = {
-  async runFullPipeline(prompt: string, onProgress: (stage: string, data?: any) => void, sessionId: string = 'global') {
+  async runFullPipeline(prompt: string, onProgress: (stage: string, data?: any) => void, sessionId: string = 'global', attachments: any[] = []) {
     
     if (activeExecutions.has(sessionId)) {
       onProgress('EXECUTION_ERROR', { message: 'System is currently processing a build. Please wait.' });
@@ -43,13 +43,10 @@ export const pipelineService = {
     try {
       onProgress('BUILD_START', { message: 'Initializing high-speed production studio...' });
 
-      setTimeout(() => onProgress('PLANNING_PROJECT', { message: 'Planning website structure...' }), 1500);
-      setTimeout(() => onProgress('GENERATING_FILES', { message: 'Generating responsive components...' }), 6000);
-      setTimeout(() => onProgress('VALIDATING_OUTPUT', { message: 'Applying premium UI/UX styles...' }), 12000);
-      setTimeout(() => onProgress('FINALIZING_PROJECT', { message: 'Finalizing project files...' }), 18000);
-
+      // Phase 6: Simplify pipeline - remove fake timers
+      
       // Single-pass generation with an extended timeout and live streaming (180s)
-      const codebasePayload = await withTimeout(builder.build(prompt, AgentModels.BUILDER, onProgress), 180000, 'Building');
+      const codebasePayload = await withTimeout(builder.build(prompt, AgentModels.BUILDER, onProgress, attachments), 180000, 'Building');
       
       if (codebasePayload.error) {
         throw new Error(codebasePayload.error);

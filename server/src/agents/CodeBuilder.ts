@@ -5,15 +5,19 @@ export class CodeBuilder extends BaseAgent {
     super(
       'CodeBuilder',
       'High-Speed Web App Production Studio',
-      `You are the Lead UI Builder for Bestlink Digital AI.
-      Your sole purpose is to generate COMPLETE, PREMIUM, PRODUCTION-READY projects.
+      `You are the Elite Software Architect for Bestlink Digital AI (Bestlink-OS-V2).
+      Your mission is to generate ULTRA-PREMIUM, CINEMATIC, and PRODUCTION-READY software.
+      
+      DESIGN PRINCIPLES (STRICT ADHERENCE):
+      1. AESTHETICS: Think Stripe, Linear, Apple, and Awwwards. Use deep high-contrast dark modes, vibrant HSL-tailored gradients, and professional typography (Outfit/Inter).
+      2. INTERACTION: Implement sophisticated micro-animations and scroll-triggered transitions using Framer Motion. Every button should have a magnetic or subtle hover effect.
+      3. LAYOUT: Use modern Bento Grids, architectural overlapping elements, and glassmorphic layers (backdrop-blur).
+      4. QUALITY: No placeholders. Generate complete, functional components. Use Lucide-React for all iconography.
       
       CORE RULES:
-      1. NEVER output conversational text or markdown.
-      2. NEVER output snippets or partial files.
-      3. ALWAYS generate the full project structure as a single JSON object.
-      4. ALWAYS use premium design principles: glassmorphism, smooth animations (Framer Motion), luxury spacing, and modern typography (Outfit/Inter).
-      5. ALWAYS ensure full responsiveness (mobile-first).
+      1. NO CONVERSATIONAL TEXT. NO MARKDOWN WRAPPERS. OUTPUT RAW JSON ONLY.
+      2. NO SNIPPETS. Every file must be complete and syntactically correct.
+      3. PROJECT SCOPE: You generate everything from luxury landing pages to complex SaaS dashboards, AI tools, and fintech platforms.
       
       MANDATORY OUTPUT FORMAT:
       {
@@ -22,7 +26,7 @@ export class CodeBuilder extends BaseAgent {
         "files": [
           {
             "path": "src/App.tsx",
-            "content": "Full source code..."
+            "content": "Full premium source code..."
           }
         ],
         "preview": {
@@ -33,13 +37,20 @@ export class CodeBuilder extends BaseAgent {
     );
   }
 
-  async build(prompt: string, model?: string, onProgress?: (stage: string, data?: any) => void) {
-    let currentPrompt = `Generate a complete, premium, production-ready project based on this request:
+  async build(prompt: string, model?: string, onProgress?: (stage: string, data?: any) => void, attachments: any[] = []) {
+    let currentPrompt = `Generate an ultra-premium, cinematic software project based on this production request:
     
-    USER REQUEST:
+    PRODUCTION REQUEST:
     "${prompt}"
     
-    Ensure full responsiveness, interactive elements, and luxury design.
+    ${attachments.length > 0 ? 'ANALYZE ATTACHED REFERENCE IMAGES/FILES FOR DESIGN DIRECTION.' : ''}
+    
+    ENSURE:
+    - High-fidelity visual hierarchy
+    - Advanced Framer Motion animations
+    - Responsive Bento Grid or Architectural layout
+    - Production-ready React/Tailwind/Lucide stack
+    
     Output MUST be ONLY the specified JSON schema, with absolutely no surrounding text.`;
 
     let attempts = 0;
@@ -50,7 +61,7 @@ export class CodeBuilder extends BaseAgent {
       let lastEmitLength = 0;
       
       try {
-        for await (const chunk of this.streamAsk(currentPrompt, model)) {
+        for await (const chunk of this.streamAsk(currentPrompt, model, attachments)) {
           if (chunk.choices?.[0]?.delta?.content) {
             fullResponse += chunk.choices[0].delta.content;
             

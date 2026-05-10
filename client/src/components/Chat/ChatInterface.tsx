@@ -75,7 +75,9 @@ export default function ChatInterface() {
     }
   }, []);
 
-  const handlePipeline = async (prompt: string, chatId: string) => {
+  const [attachments, setAttachments] = useState<any[]>([]);
+
+  const handlePipeline = async (prompt: string, chatId: string, currentAttachments: any[] = []) => {
     handleStop();
     abortControllerRef.current = new AbortController();
     setErrorDetails(null);
@@ -100,7 +102,10 @@ export default function ChatInterface() {
       const response = await fetch(API_ENDPOINT, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({ 
+          prompt,
+          attachments: currentAttachments
+        }),
         signal: abortControllerRef.current.signal
       });
 
@@ -208,29 +213,14 @@ export default function ChatInterface() {
 
     addMessage(chatId, userMessage);
     setInput("");
+    const currentAttachments = [...attachments];
+    setAttachments([]);
     
-    // Trigger pipeline for generation keywords
-    const isGeneration = /build|create|generate|make|startup|landing|page|app|website|design/i.test(userMessage.content);
-    
-    if (isGeneration) {
-      addMessage(chatId, {
-        id: Math.random().toString(36).substring(7),
-        role: 'assistant' as const,
-        content: `Acknowledged. Initializing strategic production for: "${userMessage.content}"`,
-        timestamp: Date.now()
-      });
-      await handlePipeline(userMessage.content, chatId);
-    } else {
-      // Basic fallback response for simple chat
-      const botMessage = {
-        id: Math.random().toString(36).substring(7),
-        role: 'assistant' as const,
-        content: "I'm currently optimized for website and web app production. To start a project, try saying something like 'Build a luxury real estate landing page'.",
-        timestamp: Date.now()
-      };
-      addMessage(chatId, botMessage);
-    }
+    // Trigger pipeline for ALL messages - AI FREEDOM
+    await handlePipeline(userMessage.content, chatId, currentAttachments);
   };
+
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
 
   return (
     <div className="h-full flex flex-col bg-[#050505] relative overflow-hidden">
@@ -258,6 +248,21 @@ export default function ChatInterface() {
         <div className="max-w-3xl mx-auto space-y-10 pb-32">
           
           <AnimatePresence>
+            {isUploadOpen && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mb-8"
+              >
+                <ImageUpload 
+                  attachments={attachments}
+                  onUpload={(files) => setAttachments([...attachments, ...files])}
+                  onRemove={(index) => setAttachments(attachments.filter((_, i) => i !== index))}
+                />
+              </motion.div>
+            )}
+
             {(isLoading || pipelineStage === 'EXECUTION_ERROR') && (
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
@@ -280,7 +285,7 @@ export default function ChatInterface() {
                       <h4 className="text-xs font-bold text-red-500 uppercase tracking-widest">System Incident</h4>
                       <p className="text-[11px] text-zinc-400 font-medium leading-relaxed">{errorDetails}</p>
                       <button 
-                        onClick={() => handlePipeline(currentChat?.messages[currentChat.messages.length - 2]?.content || "", currentChatId!)}
+                        onClick={() => handlePipeline(currentChat?.messages[currentChat.messages.length - 2]?.content || "", currentChatId!, [])}
                         className="mt-3 flex items-center gap-2 text-[10px] font-bold text-white bg-red-500/20 px-3 py-1.5 rounded-lg hover:bg-red-500/30 transition-all uppercase tracking-widest"
                       >
                         <RefreshCcw className="w-3 h-3" /> Retry Generation
@@ -400,7 +405,13 @@ export default function ChatInterface() {
             
             <div className="flex items-center justify-between px-8 pb-5">
               <div className="flex items-center gap-4">
-                <button className="p-2.5 hover:bg-white/5 rounded-2xl text-zinc-600 hover:text-zinc-400 transition-all border border-transparent hover:border-white/5">
+                <button 
+                  onClick={() => setIsUploadOpen(!isUploadOpen)}
+                  className={cn(
+                    "p-2.5 rounded-2xl transition-all border",
+                    isUploadOpen ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "hover:bg-white/5 text-zinc-600 hover:text-zinc-400 border-transparent hover:border-white/5"
+                  )}
+                >
                   <Paperclip className="w-5 h-5" />
                 </button>
                 <div className="h-4 w-[1px] bg-white/5" />

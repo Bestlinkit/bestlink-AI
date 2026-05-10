@@ -67,7 +67,7 @@ export default function SimpleChat() {
     setIsLoading(true);
 
     try {
-      const res = await fetch('https://bestlink-digital-ai-backend.onrender.com/api/chat', {
+      const res = await fetch('https://bestlink-ai.onrender.com/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 

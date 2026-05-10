@@ -4,7 +4,6 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Sidebar from "@/components/Sidebar/Sidebar";
 import ChatInterface from "@/components/Chat/ChatInterface";
 import SandboxContainer from "@/components/Sandbox/SandboxContainer";
-import LandingPage from "@/components/Landing/LandingPage";
 import { useAppStore } from "@/store/useAppStore";
 import { useFirestoreSync } from "@/store/useFirestoreSync";
 import { cn } from "@/lib/utils";
@@ -25,7 +24,6 @@ import {
 } from "lucide-react";
 
 export default function Home() {
-  const [isStarted, setIsStarted] = useState(false);
   const [previewWidth, setPreviewWidth] = useState(55); // percentage
   const [isResizing, setIsResizing] = useState(false);
   const resizerRef = useRef<HTMLDivElement>(null);
@@ -55,7 +53,6 @@ export default function Home() {
         const res = await fetch('https://bestlink-digital-ai-backend.onrender.com/api/health');
         if (res.ok) {
           const latency = Date.now() - start;
-          // If latency is high, it might be waking up
           if (latency > 2000) setBackendStatus('SLEEPING');
           else setBackendStatus('ONLINE');
         } else {
@@ -67,7 +64,7 @@ export default function Home() {
     };
 
     checkBackend();
-    const interval = setInterval(checkBackend, 30000); // Check every 30s
+    const interval = setInterval(checkBackend, 30000);
     return () => clearInterval(interval);
   }, [setBackendStatus]);
 
@@ -103,10 +100,6 @@ export default function Home() {
       window.removeEventListener("mouseup", stopResizing);
     };
   }, [isResizing, resize, stopResizing]);
-
-  if (!isStarted) {
-    return <LandingPage onStart={() => setIsStarted(true)} />;
-  }
 
   return (
     <div className="h-screen w-full flex bg-[#050505] text-zinc-400 font-sans selection:bg-blue-500/30 overflow-hidden">

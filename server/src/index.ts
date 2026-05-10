@@ -10,6 +10,9 @@ dotenv.config();
 const app = express();
 const port = process.env.PORT || 5000;
 
+// 🛡️ MUST be FIRST middleware
+app.use(express.json({ limit: '50mb' })); // Allow large base64 images
+
 // 🛡️ Critical Infrastructure Patch (CORS)
 const allowedOrigins = [
   "https://bestlink-digital-ai.web.app",
@@ -19,24 +22,22 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: function (origin, callback) {
-    // allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
     return callback(new Error("Not allowed by CORS"));
   },
-  methods: ["GET", "POST", "OPTIONS"],
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
   credentials: true
 }));
 
-// Handle preflight requests
+// CRITICAL: handle preflight requests
 app.options("*", cors());
 
 app.use(helmet({ crossOriginResourcePolicy: false }));
 app.use(morgan('dev'));
-app.use(express.json({ limit: '50mb' })); // Allow large base64 images
 
 // 🏥 Health Check
 app.get('/api/health', (req, res) => {

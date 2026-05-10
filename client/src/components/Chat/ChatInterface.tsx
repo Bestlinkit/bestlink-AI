@@ -57,7 +57,7 @@ export default function ChatInterface() {
     ? `${process.env.NEXT_PUBLIC_API_URL}/api/pipeline` 
     : (typeof window !== 'undefined' && window.location.hostname === 'localhost' 
         ? 'http://localhost:5000/api/pipeline' 
-        : '/api/pipeline');
+        : 'https://bestlink-digital-ai-backend.onrender.com/api/pipeline');
 
   // Auto-resize textarea
   useEffect(() => {

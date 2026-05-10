@@ -4,104 +4,88 @@ exports.CodeBuilder = void 0;
 const BaseAgent_1 = require("./BaseAgent");
 class CodeBuilder extends BaseAgent_1.BaseAgent {
     constructor() {
-        super('CodeBuilder', 'High-Speed Web App Production Studio', `You are the Lead UI Builder for Bestlink Digital AI.
-      Your sole purpose is to generate COMPLETE, PREMIUM, PRODUCTION-READY projects.
+        super('CodeBuilder', 'Visual AI Website Creation Engine', `You are the Elite Visual Synthesis Engine for Bestlink.OS. 
+      Your mission is to transform user prompts and visual references into ULTRA-PREMIUM, CINEMATIC software.
       
-      CORE RULES:
-      1. NEVER output conversational text or markdown.
-      2. NEVER output snippets or partial files.
-      3. ALWAYS generate the full project structure as a single JSON object.
-      4. ALWAYS use premium design principles: glassmorphism, smooth animations (Framer Motion), luxury spacing, and modern typography (Outfit/Inter).
-      5. ALWAYS ensure full responsiveness (mobile-first).
+      VISUAL ANALYSIS PROTOCOLS (MANDATORY WHEN IMAGES ARE PROVIDED):
+      1. DNA EXTRACTION: Analyze the layout architecture (Bento, Grid, Sidebar), detect spacing systems, and extract the exact typography style.
+      2. DESIGN LANGUAGE: Identify the aesthetic (e.g., Glassmorphism, Brutalism, Minimalist, Fintech) and color palette.
+      3. INTERACTION INFERENCE: Infer sophisticated animations and magnetic interaction states based on the visual vibe.
+      4. REINTERPRETATION: Do not clone. IMPROVE, MODERNIZE, and PERSONALIZE the design for the project's specific context.
+
+      DESIGN STANDARDS:
+      - AESTHETICS: Stripe, Linear, Apple. Use high-contrast dark modes and HSL-tailored colors.
+      - COMPONENTS: Modern architectural layers, glassmorphic elements, and fluid transitions.
       
-      MANDATORY OUTPUT FORMAT:
+      STRICT OUTPUT FORMAT (JSON ONLY):
       {
-        "projectName": "Project Title",
-        "framework": "nextjs | react | html",
+        "projectType": "website | app | dashboard",
+        "framework": "react | nextjs | html-css-js",
+        "analysis": {
+          "detectedStyle": "string",
+          "layoutType": "string",
+          "colorPalette": ["hex", "hex"],
+          "improvements": ["string"]
+        },
         "files": [
           {
-            "path": "src/App.tsx",
-            "content": "Full source code..."
+            "path": "string",
+            "content": "string"
           }
-        ],
-        "preview": {
-          "entry": "src/App.tsx"
-        },
-        "status": "complete"
-      }`);
+        ]
+      }
+      
+      CRITICAL: Generate complete, functional UI systems. NO CONVERSATIONAL TEXT.`);
     }
-    async build(prompt, model, onProgress) {
-        let currentPrompt = `Generate a complete, premium, production-ready project based on this request:
-    
-    USER REQUEST:
-    "${prompt}"
-    
-    Ensure full responsiveness, interactive elements, and luxury design.
-    Output MUST be ONLY the specified JSON schema, with absolutely no surrounding text.`;
-        let attempts = 0;
-        const maxAttempts = 2;
-        while (attempts < maxAttempts) {
-            let fullResponse = "";
-            let lastEmitLength = 0;
-            try {
-                for await (const chunk of this.streamAsk(currentPrompt, model)) {
-                    if (chunk.choices?.[0]?.delta?.content) {
-                        fullResponse += chunk.choices[0].delta.content;
-                        // Throttled emit: Only send progress to UI after every 200 characters
-                        if (onProgress && fullResponse.length - lastEmitLength > 200) {
-                            lastEmitLength = fullResponse.length;
-                            onProgress('GENERATING_FILES', {
-                                message: `Compiling VFS payload... (${Math.floor(fullResponse.length / 4)} tokens)`
-                            });
-                        }
+    async build(prompt, model, onProgress, attachments = []) {
+        const visualContext = attachments.length > 0
+            ? `VISUAL REFERENCE DETECTED: 
+         1. ANALYZE layout architecture, spacing systems, and typography style.
+         2. DETECT design language (e.g., Glassmorphism, Minimalist, Fintech).
+         3. INFER potential animations and interaction states.
+         4. SUPPORTED TYPES: SaaS dashboards, landing pages, mobile apps, admin panels, portfolios, fintech interfaces, AI apps.
+         5. REINTERPRET and IMPROVE: Do not clone. Modernize and personalize the design for this project.`
+            : '';
+        const currentPrompt = `
+      ${visualContext}
+      
+      TASK: Generate a complete project for: "${prompt}". 
+      GOAL: Function as a VISUAL AI WEBSITE CREATION ENGINE.
+      Output RAW JSON ONLY matching the required schema. Ensure the code is production-ready, architectural, and visually stunning.
+    `;
+        let fullResponse = "";
+        try {
+            for await (const chunk of this.streamAsk(currentPrompt, model, attachments)) {
+                if (chunk.choices?.[0]?.delta?.content) {
+                    fullResponse += chunk.choices[0].delta.content;
+                    if (onProgress) {
+                        onProgress('GENERATING_FILES', {
+                            message: `Generating codebase... (${fullResponse.length} chars)`
+                        });
                     }
                 }
             }
-            catch (streamError) {
-                console.error("Stream error:", streamError);
-                // Fallback to what we have or let it retry
-            }
-            // 1. Output Sanitization
-            let sanitizedOutput = fullResponse.trim();
-            if (sanitizedOutput.startsWith('```json'))
-                sanitizedOutput = sanitizedOutput.substring(7);
-            else if (sanitizedOutput.startsWith('```'))
-                sanitizedOutput = sanitizedOutput.substring(3);
-            if (sanitizedOutput.endsWith('```'))
-                sanitizedOutput = sanitizedOutput.substring(0, sanitizedOutput.length - 3);
-            sanitizedOutput = sanitizedOutput.trim();
-            try {
-                // 2. Strict Parsing Gate
-                let parsedJSON;
-                const jsonMatch = sanitizedOutput.match(/\{[\s\S]*\}/);
-                if (jsonMatch)
-                    parsedJSON = JSON.parse(jsonMatch[0]);
-                else
-                    parsedJSON = JSON.parse(sanitizedOutput);
-                // 3. Hard Schema Enforcement
-                const requiredKeys = ['projectName', 'framework', 'files', 'status'];
-                const missingKeys = requiredKeys.filter(key => !(key in parsedJSON));
-                if (missingKeys.length > 0)
-                    throw new Error(`Missing keys: ${missingKeys.join(', ')}`);
-                if (!Array.isArray(parsedJSON.files))
-                    throw new Error(`'files' must be an array.`);
-                return parsedJSON;
-            }
-            catch (e) {
-                attempts++;
-                if (attempts >= maxAttempts) {
-                    console.error('CodeBuilder failed after max attempts.');
-                    return { error: 'Failed to generate valid project format.' };
-                }
-                // 4. Auto-Regeneration Loop
-                currentPrompt = `SYSTEM (STRICT MODE): Your previous output FAILED JSON parsing.
-        Error: ${e instanceof Error ? e.message : 'Invalid JSON'}
-        You MUST correct this immediately. DO NOT USE MARKDOWN. OUTPUT RAW JSON ONLY.
-        
-        Original Request: "${prompt}"`;
-            }
         }
-        return { error: 'Unknown failure' };
+        catch (streamError) {
+            console.error("Stream error:", streamError);
+        }
+        // Quick sanitization
+        let sanitized = fullResponse.trim();
+        if (sanitized.startsWith('```json'))
+            sanitized = sanitized.substring(7);
+        else if (sanitized.startsWith('```'))
+            sanitized = sanitized.substring(3);
+        if (sanitized.endsWith('```'))
+            sanitized = sanitized.substring(0, sanitized.length - 3);
+        try {
+            const jsonMatch = sanitized.trim().match(/\{[\s\S]*\}/);
+            const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : sanitized);
+            return parsed;
+        }
+        catch (e) {
+            console.error('Parsing failed:', e);
+            return { error: 'Failed to generate valid project format.' };
+        }
     }
 }
 exports.CodeBuilder = CodeBuilder;

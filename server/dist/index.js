@@ -8,111 +8,73 @@ const cors_1 = __importDefault(require("cors"));
 const helmet_1 = __importDefault(require("helmet"));
 const morgan_1 = __importDefault(require("morgan"));
 const dotenv_1 = __importDefault(require("dotenv"));
-const multer_1 = __importDefault(require("multer"));
-const path_1 = __importDefault(require("path"));
 const openrouter_1 = require("./services/openrouter");
-const pipeline_1 = require("./services/pipeline");
-const express_rate_limit_1 = __importDefault(require("express-rate-limit"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const port = process.env.PORT || 5000;
-// Middleware
-app.use((0, helmet_1.default)({
-    crossOriginResourcePolicy: false,
-}));
+// 🛡️ MUST be FIRST middleware
+app.use(express_1.default.json({ limit: '50mb' })); // Allow large base64 images
+// 🛡️ Critical Infrastructure Patch (CORS)
 const allowedOrigins = [
-    'http://localhost:3000',
-    'https://bestlink-digital-ai.web.app',
-    'https://bestlink-digital-ai.firebaseapp.com',
-    'https://bestlink-ai.web.app',
-    'https://bestlink-ai.firebaseapp.com',
-    process.env.FRONTEND_URL
-].filter(Boolean);
+    "https://bestlink-digital-ai.web.app",
+    "http://localhost:3000",
+    "http://localhost:5173"
+];
 app.use((0, cors_1.default)({
-    origin: (origin, callback) => {
-        if (!origin || allowedOrigins.includes(origin)) {
-            callback(null, true);
+    origin: function (origin, callback) {
+        if (!origin)
+            return callback(null, true);
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
         }
-        else {
-            callback(new Error('Not allowed by CORS'));
-        }
+        return callback(new Error("Not allowed by CORS"));
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true
 }));
+// CRITICAL: handle preflight requests
+app.options("*", (0, cors_1.default)());
+app.use((0, helmet_1.default)({ crossOriginResourcePolicy: false }));
 app.use((0, morgan_1.default)('dev'));
-app.use(express_1.default.json());
-// Rate Limiting
-const limiter = (0, express_rate_limit_1.default)({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    message: { error: 'Too many requests, please try again later.' }
-});
-app.use('/api/chat', limiter);
-app.use('/uploads', express_1.default.static(path_1.default.join(__dirname, '../uploads')));
-// File Upload Setup
-const storage = multer_1.default.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/');
-    },
-    filename: (req, file, cb) => {
-        cb(null, Date.now() + '-' + file.originalname);
-    }
-});
-const upload = (0, multer_1.default)({ storage });
-// Routes
+// 🏥 Health Check
 app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', message: 'Bestlink Digital AI Engine is running' });
+    res.json({ status: 'online', uptime: process.uptime() });
 });
-// Chat Endpoint (Streaming)
+// 🤖 Minimal AI Assistant Endpoint
 app.post('/api/chat', async (req, res) => {
-    const { messages, model, options } = req.body;
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
+    const { text, image, url } = req.body;
+    if (!text && !image) {
+        return res.status(400).json({ error: 'Text or Image is required' });
+    }
     try {
-        await openrouter_1.openRouterService.streamChat(messages, model, options, (chunk) => {
-            res.write(`data: ${JSON.stringify(chunk)}\n\n`);
-            res.flush?.();
-        });
-        res.write('data: [DONE]\n\n');
-        res.end();
+        const messages = [];
+        let promptContent = [{ type: 'text', text: text || 'Please analyze this image.' }];
+        // Handle URL as context
+        if (url) {
+            promptContent[0].text += `\n\nURL Context: ${url}`;
+        }
+        // Handle Image (Base64)
+        if (image) {
+            promptContent.push({
+                type: 'image_url',
+                image_url: {
+                    url: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
+                }
+            });
+        }
+        messages.push({ role: 'user', content: promptContent });
+        // Use a robust multimodal model
+        const model = 'google/gemini-2.0-flash-exp:free';
+        const reply = await openrouter_1.openRouterService.chat(messages, model, { max_tokens: 2000 });
+        res.json({ reply });
     }
     catch (error) {
-        console.error('Chat error:', error);
-        res.write(`data: ${JSON.stringify({ error: 'Internal Server Error' })}\n\n`);
-        res.end();
+        console.error('[API Error]:', error.message);
+        res.status(500).json({ reply: 'AI temporarily unavailable. Please try again.' });
     }
 });
-// File Upload Endpoint
-app.post('/api/upload', upload.array('files'), (req, res) => {
-    const protocol = req.protocol;
-    const host = req.get('host');
-    const baseUrl = process.env.PRODUCTION_URL || `${protocol}://${host}`;
-    const files = req.files;
-    const fileData = files.map(file => ({
-        filename: file.filename,
-        originalName: file.originalname,
-        path: `${baseUrl}/uploads/${file.filename}`,
-        size: file.size,
-        mimetype: file.mimetype
-    }));
-    res.json({ files: fileData });
-});
-// Automated Project Generation Pipeline
-app.post('/api/pipeline', async (req, res) => {
-    const { prompt } = req.body;
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    await pipeline_1.pipelineService.runFullPipeline(prompt, (stage, data) => {
-        res.write(`data: ${JSON.stringify({ stage, data })}\n\n`);
-        res.flush?.();
-    });
-    res.write('data: [DONE]\n\n');
-    res.end();
-});
-// Start Server
+// 🚀 Start Server
 app.listen(port, () => {
-    const baseUrl = process.env.PRODUCTION_URL || `http://localhost:${port}`;
-    console.log(`AI Engine running at ${baseUrl}`);
+    console.log(`Minimal AI Engine running at http://localhost:${port}`);
 });

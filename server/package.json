@@ -23,15 +23,15 @@
     "sqlite3": "^5.1.7",
     "sse-channel": "^4.0.0",
     "uuid": "^14.0.0",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
+    "zod": "^4.4.3",
     "@types/cors": "^2.8.17",
     "@types/express": "^4.17.21",
     "@types/morgan": "^1.9.9",
     "@types/multer": "^1.4.11",
-    "ts-node-dev": "^2.0.0",
-    "typescript": "^5.3.3"
+    "typescript": "^5.3.3",
+    "ts-node-dev": "^2.0.0"
+  },
+  "devDependencies": {
   },
   "keywords": [],
   "author": "",

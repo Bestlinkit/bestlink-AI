@@ -321,40 +321,52 @@ export default function ChatInterface() {
           {currentChat && currentChat.messages.length > 0 ? (
             <MessageList messages={currentChat.messages} isLoading={isLoading} />
           ) : (
-            <div className="py-24 flex flex-col items-center justify-center text-center space-y-16 animate-panel">
+            <div className="py-24 flex flex-col items-center justify-center text-center space-y-20 max-w-4xl mx-auto">
+              {/* ⚡ CENTER LOGO ENGINE */}
               <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
+                initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-                className="w-24 h-24 rounded-[2.5rem] bg-white flex items-center justify-center shadow-[0_0_100px_rgba(255,255,255,0.1)] relative group"
+                transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+                className="relative group"
               >
-                <Zap className="w-10 h-10 text-black fill-current relative z-10" />
-                <div className="absolute inset-0 bg-white blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" />
+                <div className="absolute inset-0 bg-blue-500/20 blur-[100px] rounded-full group-hover:bg-blue-500/30 transition-all duration-700" />
+                <div className="w-32 h-32 rounded-[2.5rem] bg-gradient-to-br from-white to-white/60 flex items-center justify-center shadow-[0_0_50px_rgba(255,255,255,0.1)] relative z-10 animate-float">
+                  <Zap className="w-14 h-14 text-black fill-current" />
+                </div>
               </motion.div>
               
-              <div className="space-y-4 max-w-lg mx-auto">
-                <h1 className="text-6xl font-black text-white tracking-tighter leading-none italic uppercase">
+              <div className="space-y-6">
+                <h1 className="text-8xl font-black tracking-tighter leading-none italic uppercase gradient-text glow-text">
                   Bestlink.OS
                 </h1>
-                <p className="text-white/20 text-[10px] font-black uppercase tracking-[0.5em] ml-2">
-                  Elite Production Engine v2.4
-                </p>
+                <div className="flex items-center justify-center gap-4">
+                  <div className="h-[1px] w-12 bg-gradient-to-r from-transparent to-white/20" />
+                  <p className="text-white/40 text-[11px] font-black uppercase tracking-[0.6em]">
+                    Elite Production Engine v2.4
+                  </p>
+                  <div className="h-[1px] w-12 bg-gradient-to-l from-transparent to-white/20" />
+                </div>
               </div>
               
-              <div className="grid grid-cols-2 gap-4 w-full max-w-2xl">
+              <div className="bento-grid w-full">
                 {[
-                  { q: "LUXURY REAL ESTATE PORTFOLIO", icon: Box },
-                  { q: "FINTECH DASHBOARD ARCHITECTURE", icon: Cpu },
-                  { q: "MODERN AI SAAS INTERFACE", icon: Layout },
-                  { q: "MINIMALIST AGENCY LANDING", icon: Activity }
+                  { q: "LUXURY REAL ESTATE PORTFOLIO", icon: Box, desc: "Architectural property showcases." },
+                  { q: "FINTECH DASHBOARD SYSTEM", icon: Cpu, desc: "High-velocity financial data viz." },
+                  { q: "MODERN AI SAAS INTERFACE", icon: Layout, desc: "Next-gen software experiences." },
+                  { q: "MINIMALIST AGENCY LANDING", icon: Activity, desc: "Premium conversion-led design." }
                 ].map((item) => (
                   <button
                     key={item.q}
                     onClick={() => setInput(item.q)}
-                    className="p-6 text-left rounded-3xl bg-white/[0.02] border border-white/5 hover:bg-white/[0.04] hover:border-white/10 transition-all group flex items-start gap-4 active:scale-[0.98]"
+                    className="glass-card p-8 text-left rounded-[2rem] group flex flex-col gap-4 active:scale-[0.98]"
                   >
-                    <item.icon className="w-4 h-4 text-white/10 group-hover:text-white transition-colors mt-0.5" />
-                    <p className="text-[9px] font-black text-white/30 group-hover:text-white transition-colors uppercase tracking-[0.2em] leading-relaxed">{item.q}</p>
+                    <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center group-hover:bg-white/10 transition-colors">
+                      <item.icon className="w-5 h-5 text-white/20 group-hover:text-white transition-colors" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-white group-hover:text-white transition-colors uppercase tracking-[0.2em]">{item.q}</p>
+                      <p className="text-[10px] text-white/20 font-bold uppercase tracking-widest">{item.desc}</p>
+                    </div>
                   </button>
                 ))}
               </div>
@@ -363,12 +375,14 @@ export default function ChatInterface() {
         </div>
       </div>
 
-      {/* FLOATING COMMAND BAR (RAYCAST INSPIRED) */}
-      <div className="absolute bottom-10 inset-x-0 px-6 z-50">
+      {/* 🛠️ FLOATING COMMAND CENTER */}
+      <div className="absolute bottom-12 inset-x-0 px-6 z-50">
         <div className="max-w-3xl mx-auto">
           <div className="relative group">
-            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/10 to-purple-600/10 rounded-[2.5rem] blur opacity-0 group-focus-within:opacity-100 transition-opacity" />
-            <div className="relative bg-[#09090b]/80 backdrop-blur-3xl border border-white/10 rounded-[2.5rem] overflow-hidden focus-within:border-white/20 transition-all shadow-[0_20px_50px_rgba(0,0,0,0.5)]">
+            {/* GLOW EFFECT */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-[3rem] blur-2xl opacity-0 group-focus-within:opacity-100 transition-all duration-700" />
+            
+            <div className="relative bg-[#09090b]/80 backdrop-blur-3xl border border-white/10 rounded-[3rem] overflow-hidden focus-within:border-white/20 transition-all shadow-[0_30px_100px_rgba(0,0,0,0.8)]">
               <textarea
                 ref={textareaRef}
                 rows={1}
@@ -380,25 +394,28 @@ export default function ChatInterface() {
                     handleSend();
                   }
                 }}
-                placeholder="describe your vision..."
-                className="w-full bg-transparent border-none outline-none py-7 px-10 text-sm text-zinc-100 placeholder:text-zinc-700 resize-none max-h-[200px] custom-scrollbar"
+                placeholder="Describe your vision..."
+                className="w-full bg-transparent border-none outline-none py-10 px-12 text-lg text-white placeholder:text-white/10 resize-none max-h-[200px] custom-scrollbar font-medium tracking-tight"
               />
               
-              <div className="flex items-center justify-between px-8 pb-6">
-                <div className="flex items-center gap-5">
+              <div className="flex items-center justify-between px-10 pb-8">
+                <div className="flex items-center gap-6">
                   <button 
                     onClick={() => setIsUploadOpen(!isUploadOpen)}
                     className={cn(
-                      "p-2.5 rounded-2xl transition-all border",
-                      isUploadOpen ? "bg-blue-500/20 border-blue-500/30 text-blue-400" : "hover:bg-white/5 text-zinc-600 hover:text-zinc-400 border-transparent hover:border-white/5"
+                      "p-3 rounded-2xl transition-all border",
+                      isUploadOpen ? "bg-white text-black border-white" : "hover:bg-white/5 text-white/20 hover:text-white border-transparent hover:border-white/10"
                     )}
                   >
-                    <Paperclip className="w-5 h-5" />
+                    <Paperclip className="w-6 h-6" />
                   </button>
-                  <div className="h-4 w-[1px] bg-white/5" />
-                  <div className="flex items-center gap-2">
-                    <div className={cn("w-1.5 h-1.5 rounded-full", isLoading ? "bg-blue-500 animate-pulse" : "bg-zinc-800")} />
-                    <span className="text-[9px] font-bold text-zinc-600 uppercase tracking-[0.2em]">production engine ready</span>
+                  <div className="h-6 w-[1px] bg-white/5" />
+                  <div className="flex items-center gap-3">
+                    <div className={cn(
+                      "w-2 h-2 rounded-full transition-all duration-500",
+                      isLoading ? "bg-blue-500 animate-pulse" : "bg-white/10"
+                    )} />
+                    <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.4em]">system online</span>
                   </div>
                 </div>
                 
@@ -406,13 +423,13 @@ export default function ChatInterface() {
                   onClick={handleSend}
                   disabled={!input.trim() || isLoading}
                   className={cn(
-                    "w-12 h-12 rounded-2xl flex items-center justify-center transition-all shadow-xl active:scale-95",
+                    "w-16 h-16 rounded-[2rem] flex items-center justify-center transition-all shadow-2xl active:scale-95",
                     !input.trim() || isLoading 
-                      ? "bg-zinc-900 text-zinc-700" 
-                      : "bg-white text-black hover:scale-105"
+                      ? "bg-white/5 text-white/10" 
+                      : "bg-white text-black hover:scale-105 hover:shadow-[0_0_30px_rgba(255,255,255,0.2)]"
                   )}
                 >
-                  {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Send className="w-6 h-6" />}
+                  {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Send className="w-8 h-8" />}
                 </button>
               </div>
             </div>

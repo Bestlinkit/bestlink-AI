@@ -19,7 +19,9 @@ import {
   WifiOff,
   CloudLightning,
   AlertCircle,
-  ShieldAlert
+  ShieldAlert,
+  Box,
+  Cpu
 } from "lucide-react";
 
 export default function Home() {

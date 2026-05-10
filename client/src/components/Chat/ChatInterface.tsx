@@ -42,6 +42,7 @@ export default function ChatInterface() {
     addChat, 
     addMessage, 
     setSandboxFiles,
+    setSandboxOpen,
     isHydrated 
   } = useAppStore();
 
@@ -78,120 +79,89 @@ export default function ChatInterface() {
 
   const [attachments, setAttachments] = useState<any[]>([]);
 
-  const handlePipeline = async (prompt: string, chatId: string, currentAttachments: any[] = []) => {
-    handleStop();
-    abortControllerRef.current = new AbortController();
-    setErrorDetails(null);
-
+  const handlePipeline = async (prompt: string, chatId: string, attachments: any[] = []) => {
     setIsLoading(true);
-    useAppStore.getState().setEngineStatus('WAITING');
     setPipelineStage('BUILD_START');
-    setPipelineMessage("Initializing production matrix...");
-    
-    console.log(`[Pipeline] Starting production for: "${prompt}"`);
+    setPipelineMessage("Initializing production engine...");
+    setErrorDetails(null);
+    useAppStore.getState().setEngineStatus('WAITING');
 
-    const watchdog = setTimeout(() => {
-      if (isLoading) {
-        handleStop();
-        setErrorDetails("Backend connection lost. The production engine timed out (30s). This ensures UI responsiveness during network instability.");
-        useAppStore.getState().setEngineStatus('FAILED');
-        toast.error("Pipeline connectivity lost.");
-      }
-    }, 30000);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 60000); // 60s timeout
 
     try {
-      const response = await fetch(API_ENDPOINT, {
+      setPipelineMessage("Synthesizing design DNA...");
+      
+      const response = await fetch('https://bestlink-digital-ai-backend.onrender.com/api/pipeline', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          prompt,
-          attachments: currentAttachments
-        }),
-        signal: abortControllerRef.current.signal
+        body: JSON.stringify({ prompt, attachments, stream: false }), // Request full JSON
+        signal: controller.signal
       });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Engine Error (${response.status}): ${errorText.slice(0, 100)}`);
-      }
+      if (!response.ok) throw new Error(`Engine responded with ${response.status}`);
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error('Failed to open stream reader');
+      // Handle both streaming and direct JSON for robustness
+      const contentType = response.headers.get('content-type');
+      let data;
 
-      const decoder = new TextDecoder();
-      let buffer = "";
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) {
-          console.log("[Pipeline] Stream closed normally.");
-          break;
-        }
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || "";
-
-        for (const line of lines) {
-          if (!line.trim() || !line.startsWith('data: ')) continue;
-          
-          try {
-            const rawData = line.slice(6);
-            if (rawData === '[DONE]') break;
-            
-            const { stage, data } = JSON.parse(rawData);
-            console.log(`[Pipeline] Stage: ${stage}`, data?.message || "");
-
-            if (stage === 'EXECUTION_ERROR') {
-              setErrorDetails(data.message);
-              throw new Error(data.message);
+      if (contentType?.includes('text/event-stream')) {
+        // Simple stream reader that just looks for COMPLETED_PROJECT
+        const reader = response.body?.getReader();
+        const decoder = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader!.read();
+          if (done) break;
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              try {
+                const json = JSON.parse(line.substring(6));
+                if (json.stage === 'COMPLETED_PROJECT') data = json.data;
+                if (json.stage === 'EXECUTION_ERROR') throw new Error(json.data?.message || "Build failed.");
+                if (json.data?.message) setPipelineMessage(json.data.message);
+              } catch (e) {}
             }
-
-            setPipelineStage(stage as PipelineStage);
-            if (data?.message) setPipelineMessage(data.message);
-            
-            if (stage === 'COMPLETED_PROJECT' && data.payload?.files) {
-              const newFiles = data.payload.files.map((file: any) => ({
-                id: Math.random().toString(36).substring(7),
-                name: file.path,
-                language: file.path.split('.').pop() || 'typescript',
-                content: file.content
-              }));
-              
-              setSandboxFiles(newFiles);
-              
-              // PERSISTENT HISTORY: Add assistant summary
-              addMessage(chatId, {
-                id: Math.random().toString(36).substring(7),
-                role: 'assistant',
-                content: `### 🚀 Production Successful\n\nGenerated **${newFiles.length} files** for your project. The live preview has been synchronized with the latest codebase.\n\n**Framework:** ${data.payload.framework || 'React'}\n**Type:** ${data.payload.projectType || 'Web App'}`,
-                timestamp: Date.now()
-              });
-              
-              toast.success("Production codebase synchronized.");
-            }
-
-            if (stage === 'COMPLETED') {
-              setIsLoading(false);
-              setPipelineStage(null);
-              useAppStore.getState().setEngineStatus('READY');
-            }
-          } catch (e) {
-            // Ignore partial JSON chunks
           }
         }
+      } else {
+        data = await response.json();
       }
+
+      if (data?.payload?.files) {
+        const newFiles = data.payload.files.map((file: any) => ({
+          id: Math.random().toString(36).substring(7),
+          name: file.path,
+          language: file.path.split('.').pop() || 'html',
+          content: file.content
+        }));
+        
+        setSandboxFiles(newFiles);
+        setSandboxOpen(true);
+        
+        addMessage(chatId, {
+          id: Math.random().toString(36).substring(7),
+          role: 'assistant',
+          content: `### 🚀 Production Successful\n\nGenerated **${newFiles.length} files** for your project. The live preview has been synchronized.`,
+          timestamp: Date.now()
+        });
+        
+        toast.success("Production ready.");
+      } else {
+        throw new Error("No files were generated.");
+      }
+
     } catch (error: any) {
-      if (error.name !== 'AbortError') {
-        console.error('[Pipeline] Critical Error:', error);
-        setErrorDetails(error.message || "An unexpected engine failure occurred. Please check your network connection.");
-        toast.error("Engine failure.");
-        setPipelineStage('EXECUTION_ERROR');
-        useAppStore.getState().setEngineStatus('FAILED');
-      }
+      console.error('[Pipeline] Error:', error);
+      const message = error.name === 'AbortError' ? "Request timed out." : (error.message || "Engine failure.");
+      setErrorDetails(message);
+      toast.error(message);
+      useAppStore.getState().setEngineStatus('FAILED');
     } finally {
-      clearTimeout(watchdog);
+      clearTimeout(timeoutId);
       setIsLoading(false);
+      setPipelineStage(null);
     }
   };
 

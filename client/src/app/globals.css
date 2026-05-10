@@ -1,21 +1,19 @@
 @import "tailwindcss";
 
 :root {
-  /* 🌑 DEEP SPACE TOKENS */
-  --background: #030303;
-  --foreground: #ffffff;
-  --card: #09090b;
-  --border: rgba(255, 255, 255, 0.08);
-  --accent: rgba(255, 255, 255, 0.05);
+  /* 🌙 CHATGPT DARK THEME */
+  --background: #0f0f0f;
+  --foreground: #ececec;
+  --card: #171717;
+  --border: rgba(255, 255, 255, 0.1);
+  --accent: #212121;
   --primary: #ffffff;
-  --secondary: #a1a1a1;
-  --radius: 1.5rem;
+  --secondary: #b4b4b4;
+  --radius: 0.75rem;
   
-  /* 🎨 SHADCN-LIKE TOKENS FOR COMPONENTS */
-  --bg-main: #030303;
-  --bg-panel: rgba(9, 9, 11, 0.4);
-  --text-main: #ffffff;
-  --text-muted: rgba(255, 255, 255, 0.4);
+  /* 💬 MESSAGE BUBBLES */
+  --user-bubble: #2f2f2f;
+  --ai-bubble: #1f1f1f;
 }
 
 @layer base {
@@ -31,12 +29,7 @@
     color: var(--foreground);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
     -webkit-font-smoothing: antialiased;
-    overflow: hidden;
-    background-image: 
-      radial-gradient(at 0% 0%, hsla(253,16%,7%,1) 0, transparent 50%), 
-      radial-gradient(at 50% 0%, hsla(225,39%,30%,0.15) 0, transparent 50%),
-      radial-gradient(at 100% 0%, hsla(339,49%,30%,0.05) 0, transparent 50%);
-    background-attachment: fixed;
+    line-height: 1.6;
   }
 }
 

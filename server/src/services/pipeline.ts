@@ -28,31 +28,18 @@ export const pipelineService = {
     }
     activeExecutions.add(sessionId);
 
-    const heartbeat = setInterval(() => {
-      onProgress('[KEEP-ALIVE]');
-    }, 3000);
-
     const builder = new CodeBuilder();
     let finalStatus = 'failed';
     
-    const globalTimeout = setTimeout(() => {
-      onProgress('EXECUTION_ERROR', { message: 'Maximum execution time exceeded (240s). Pipeline aborted.' });
-      activeExecutions.delete(sessionId);
-    }, 240000);
-
     try {
-      onProgress('BUILD_START', { message: 'Initializing high-speed production studio...' });
+      onProgress('BUILD_START', { message: 'Initializing direct production pipeline...' });
 
-      // Phase 6: Simplify pipeline - remove fake timers
-      
-      // Single-pass generation with an extended timeout and live streaming (180s)
-      const codebasePayload = await withTimeout(builder.build(prompt, AgentModels.BUILDER, onProgress, attachments), 180000, 'Building');
+      // Emergency Core: Direct model call
+      const codebasePayload = await withTimeout(builder.build(prompt, AgentModels.BUILDER, onProgress, attachments), 120000, 'Building');
       
       if (codebasePayload.error) {
         throw new Error(codebasePayload.error);
       }
-      
-      onProgress('FINALIZING_PROJECT', { message: 'Rendering preview...' });
       
       finalStatus = 'success';
       onProgress('COMPLETED_PROJECT', { 
@@ -64,19 +51,12 @@ export const pipelineService = {
     } catch (error) {
       console.error('Pipeline Execution Failed:', error);
       onProgress('EXECUTION_ERROR', { 
-        message: 'The AI engine encountered a critical error.',
-        error: error instanceof Error ? error.message : 'Unknown pipeline error'
+        message: error instanceof Error ? error.message : 'Unknown pipeline error'
       });
       finalStatus = 'error';
     } finally {
-      clearInterval(heartbeat);
-      clearTimeout(globalTimeout);
       activeExecutions.delete(sessionId);
-      
-      onProgress('COMPLETE', { 
-        status: finalStatus,
-        message: 'Pipeline execution finalized.' 
-      });
+      onProgress('COMPLETE', { status: finalStatus });
     }
   }
 };

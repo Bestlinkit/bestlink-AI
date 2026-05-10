@@ -149,10 +149,6 @@ export default function ChatInterface() {
             setPipelineStage(stage as PipelineStage);
             if (data?.message) setPipelineMessage(data.message);
             
-            if (stage === 'SELECTING_TEMPLATE' && data.plan) {
-              setProjectPlan(data.plan);
-            }
-
             if (stage === 'COMPLETED_PROJECT' && data.payload?.files) {
               const newFiles = data.payload.files.map((file: any) => ({
                 id: Math.random().toString(36).substring(7),
@@ -290,48 +286,6 @@ export default function ChatInterface() {
                       >
                         <RefreshCcw className="w-3 h-3" /> Retry Generation
                       </button>
-                    </div>
-                  </motion.div>
-                )}
-
-                {projectPlan && isInsightsOpen && !errorDetails && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="p-8 rounded-[2.5rem] bg-white/[0.02] border border-white/5 shadow-2xl relative overflow-hidden group"
-                  >
-                    <div className="absolute inset-0 bg-blue-500/5 blur-[80px] pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-                    
-                    <div className="relative flex items-center justify-between border-b border-white/5 pb-6 mb-6">
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-2xl bg-blue-600/10 flex items-center justify-center border border-blue-500/20 shadow-xl">
-                          <Cpu className="w-6 h-6 text-blue-400" />
-                        </div>
-                        <div>
-                          <h4 className="text-sm font-bold text-white uppercase tracking-widest font-outfit">{projectPlan.title}</h4>
-                          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter mt-1">{projectPlan.type} Strategy</p>
-                        </div>
-                      </div>
-                      <button onClick={() => setIsInsightsOpen(false)} className="p-2 hover:bg-white/10 rounded-xl transition-all">
-                        <X className="w-4 h-4 text-zinc-600 hover:text-white" />
-                      </button>
-                    </div>
-                    
-                    <div className="relative grid grid-cols-2 gap-8">
-                      <div className="space-y-4">
-                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Architecture Modules</span>
-                        <div className="flex flex-wrap gap-2">
-                          {projectPlan.architecture?.sections?.map((s: string) => (
-                            <span key={s} className="px-3 py-1 rounded-full bg-white/5 border border-white/5 text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">{s}</span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="space-y-4">
-                        <span className="text-[10px] font-bold text-zinc-600 uppercase tracking-widest">Technical Stack</span>
-                        <div className="text-[11px] text-zinc-400 leading-relaxed font-medium">
-                          {projectPlan.design?.aesthetic} design system utilizing {projectPlan.design?.colorSystem} colors and {projectPlan.design?.typography} typography.
-                        </div>
-                      </div>
                     </div>
                   </motion.div>
                 )}

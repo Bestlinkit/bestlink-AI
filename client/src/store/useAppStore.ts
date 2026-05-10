@@ -9,12 +9,23 @@ export interface Message {
   timestamp: number;
 }
 
+export interface ProjectMemory {
+  title?: string;
+  designStyle?: string;
+  techStack?: string[];
+  colorPalette?: string[];
+  typography?: string[];
+  animationStyle?: string;
+  generatedSections?: string[];
+}
+
 export interface Chat {
   id: string;
   title: string;
   messages: Message[];
   model: string;
   createdAt: number;
+  projectMemory?: ProjectMemory;
 }
 
 export interface SandboxFile {

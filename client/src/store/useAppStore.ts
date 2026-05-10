@@ -76,6 +76,8 @@ interface AppState {
   setSandboxFiles: (files: SandboxFile[]) => void;
   updateFileContent: (id: string, content: string) => void;
   setActiveFile: (id: string) => void;
+  isHydrated: boolean;
+  setHydrated: (hydrated: boolean) => void;
 }
 
 const DEFAULT_FILES: SandboxFile[] = [
@@ -113,6 +115,8 @@ export const useAppStore = create<AppState>()(
       // Workspace Initial State
       workspaces: [],
       activeWorkspaceId: null,
+      isHydrated: false,
+      setHydrated: (hydrated) => set({ isHydrated: hydrated }),
 
       // Workspace Actions
       createWorkspace: (name) => {
@@ -241,12 +245,16 @@ export const useAppStore = create<AppState>()(
       }
     }),
     {
-      name: 'bestlink-storage',
+      name: 'bestlink-storage-v2',
+      onRehydrateStorage: () => (state) => {
+        state?.setHydrated(true);
+      },
       partialize: (state) => ({
         workspaces: state.workspaces,
         activeWorkspaceId: state.activeWorkspaceId,
         theme: state.theme,
-        activeAgentId: state.activeAgentId
+        activeAgentId: state.activeAgentId,
+        model: state.model
       })
     }
   )

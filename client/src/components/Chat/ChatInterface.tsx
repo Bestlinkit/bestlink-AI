@@ -41,7 +41,8 @@ export default function ChatInterface() {
     activeWorkspaceId, 
     addChat, 
     addMessage, 
-    setSandboxFiles
+    setSandboxFiles,
+    isHydrated 
   } = useAppStore();
 
   const activeWorkspace = workspaces.find(w => w.id === activeWorkspaceId);
@@ -158,6 +159,15 @@ export default function ChatInterface() {
               }));
               
               setSandboxFiles(newFiles);
+              
+              // PERSISTENT HISTORY: Add assistant summary
+              addMessage(chatId, {
+                id: Math.random().toString(36).substring(7),
+                role: 'assistant',
+                content: `### 🚀 Production Successful\n\nGenerated **${newFiles.length} files** for your project. The live preview has been synchronized with the latest codebase.\n\n**Framework:** ${data.payload.framework || 'React'}\n**Type:** ${data.payload.projectType || 'Web App'}`,
+                timestamp: Date.now()
+              });
+              
               toast.success("Production codebase synchronized.");
             }
 
@@ -186,7 +196,7 @@ export default function ChatInterface() {
   };
 
   const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+    if (!input.trim() || isLoading || !isHydrated) return;
 
     let chatId = currentChatId;
     if (!chatId) {

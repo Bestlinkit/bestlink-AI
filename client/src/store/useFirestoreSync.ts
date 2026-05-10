@@ -23,9 +23,11 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
   const pendingUpdateRef = useRef<NodeJS.Timeout | null>(null);
   const consecutiveFailuresRef = useRef<number>(0);
 
+  const isHydrated = useAppStore(state => state.isHydrated);
+
   useEffect(() => {
     // Phase 1: Guards
-    if (!db || !isAuthReady) {
+    if (!db || !isAuthReady || !isHydrated) {
       if (!db) {
         setStatus('OFFLINE');
         useAppStore.getState().setFirebaseStatus('OFFLINE');
@@ -34,7 +36,7 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
     }
 
     const sessionId = getSessionId();
-    const docRef = doc(db, 'app_state', `${sessionId}_bestlink-storage`);
+    const docRef = doc(db, 'app_state', `${sessionId}_bestlink-storage-v2`);
 
     // 1. Initial Load & Presence Check
     const initLoad = async () => {
@@ -45,8 +47,9 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
         if (docSnap.exists()) {
           const rawData = docSnap.data().value as string;
           const parsed = JSON.parse(rawData);
+          
           if (parsed?.state?.workspaces && parsed.version > lastRemoteVersionRef.current) {
-            console.log("[FirestoreSync] Cloud recovery successful.");
+            console.log("[FirestoreSync] Cloud recovery successful. Version:", parsed.version);
             
             isSyncingRef.current = true;
             useAppStore.setState({
@@ -67,7 +70,6 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
         if (err.code === 'permission-denied') {
           setStatus('PERMISSION_DENIED');
           useAppStore.getState().setFirebaseStatus('PERMISSION_DENIED');
-          toast.error("Cloud Sync Permission Denied. Check infrastructure rules.");
         } else {
           setStatus('ERROR');
           useAppStore.getState().setFirebaseStatus('OFFLINE');
@@ -80,7 +82,8 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
     // 2. Outbound Sync (Local -> Firestore)
     const unsubStore = useAppStore.subscribe((state, prevState) => {
       if (isSyncingRef.current || status === 'PERMISSION_DENIED') return;
-
+      
+      // Deep compare to avoid unnecessary writes
       if (JSON.stringify(state.workspaces) === JSON.stringify(prevState.workspaces) && 
           state.activeWorkspaceId === prevState.activeWorkspaceId) {
         return;
@@ -114,13 +117,7 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
         } catch (error: any) {
           consecutiveFailuresRef.current++;
           console.warn("[FirestoreSync] Outbound sync failed:", error.message);
-          
-          if (error.code === 'permission-denied') {
-            setStatus('PERMISSION_DENIED');
-            toast.error("Cloud Sync: Insufficient Permissions.");
-          } else if (consecutiveFailuresRef.current > 3) {
-            setStatus('OFFLINE');
-          }
+          if (consecutiveFailuresRef.current > 3) setStatus('OFFLINE');
         }
       }, 5000);
     });
@@ -152,11 +149,8 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
       }
     }, (err: any) => {
       console.warn("[FirestoreSync] Snapshot listener failed:", err.message);
-      if (err.code === 'permission-denied') {
-        setStatus('PERMISSION_DENIED');
-      } else {
-        setStatus('OFFLINE');
-      }
+      if (err.code === 'permission-denied') setStatus('PERMISSION_DENIED');
+      else setStatus('OFFLINE');
     });
 
     return () => {
@@ -164,7 +158,7 @@ export function useFirestoreSync(isAuthReady: boolean = false) {
       unsubFirestore();
       if (pendingUpdateRef.current) clearTimeout(pendingUpdateRef.current);
     };
-  }, [isAuthReady, status]);
+  }, [isAuthReady, isHydrated]);
 
   return { status };
 }

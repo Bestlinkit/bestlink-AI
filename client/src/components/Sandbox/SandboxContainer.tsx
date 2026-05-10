@@ -41,21 +41,23 @@ export default function SandboxContainer() {
 
   // Convert Zustand files to Sandpack format with hashing to prevent unnecessary reloads
   const sandpackFiles = useMemo(() => {
-    const files = sandboxFiles.reduce((acc, file) => {
+    return sandboxFiles.reduce((acc, file) => {
       const path = file.name.startsWith('/') ? file.name : `/${file.name}`;
       acc[path] = file.content;
       return acc;
     }, {} as Record<string, string>);
+  }, [sandboxFiles]);
 
-    const currentHash = JSON.stringify(files);
+  // Handle compilation state and hash tracking separately
+  useEffect(() => {
+    const currentHash = JSON.stringify(sandpackFiles);
     if (currentHash !== lastFilesHash.current) {
       lastFilesHash.current = currentHash;
-      // Trigger a brief compilation state for UX
       setIsCompiling(true);
-      setTimeout(() => setIsCompiling(false), 800);
+      const timer = setTimeout(() => setIsCompiling(false), 1200);
+      return () => clearTimeout(timer);
     }
-    return files;
-  }, [sandboxFiles]);
+  }, [sandpackFiles]);
 
   const template = useMemo(() => {
     const fileNames = sandboxFiles.map(f => f.name.toLowerCase());

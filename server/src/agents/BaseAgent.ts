@@ -37,6 +37,6 @@ export abstract class BaseAgent {
       { role: 'user', content: userContent.length > 1 ? userContent : prompt }
     ];
 
-    yield* openRouterService.streamChatGenerator(messages, model);
+    yield* openRouterService.streamChat(messages, model);
   }
 }

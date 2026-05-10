@@ -37,41 +37,61 @@ app.use((0, cors_1.default)({
 app.options("*", (0, cors_1.default)());
 app.use((0, helmet_1.default)({ crossOriginResourcePolicy: false }));
 app.use((0, morgan_1.default)('dev'));
+const prompts_1 = require("./shared/prompts");
 // 🏥 Health Check
 app.get('/api/health', (req, res) => {
     res.json({ status: 'online', uptime: process.uptime() });
 });
-// 🤖 Minimal AI Assistant Endpoint
+// 🤖 Elite AI Prompt Engine Endpoint (STREAMING)
 app.post('/api/chat', async (req, res) => {
-    const { text, image, url } = req.body;
-    if (!text && !image) {
-        return res.status(400).json({ error: 'Text or Image is required' });
+    const { text, image, url, history = [], model: requestedModel } = req.body;
+    if (!text && !image && history.length === 0) {
+        return res.status(400).json({ error: 'Message or History is required' });
     }
+    // Set headers for SSE
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
     try {
-        const messages = [];
-        let promptContent = [{ type: 'text', text: text || 'Please analyze this image.' }];
-        // Handle URL as context
-        if (url) {
-            promptContent[0].text += `\n\nURL Context: ${url}`;
+        const messages = [
+            { role: 'system', content: prompts_1.ELITE_DIRECTOR_SYSTEM_PROMPT },
+            ...history
+        ];
+        if (text || image) {
+            let promptContent = [{ type: 'text', text: text || 'Please analyze this.' }];
+            if (url)
+                promptContent[0].text += `\n\nURL Context: ${url}`;
+            if (image) {
+                promptContent.push({
+                    type: 'image_url',
+                    image_url: { url: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}` }
+                });
+            }
+            messages.push({ role: 'user', content: promptContent });
         }
-        // Handle Image (Base64)
-        if (image) {
-            promptContent.push({
-                type: 'image_url',
-                image_url: {
-                    url: image.startsWith('data:') ? image : `data:image/jpeg;base64,${image}`
-                }
-            });
+        const modelMap = {
+            'deepseek': 'deepseek/deepseek-chat',
+            'qwen': 'qwen/qwen-2.5-72b-instruct',
+            'glm': 'google/gemini-2.0-flash-exp:free',
+            'claude': 'anthropic/claude-3-haiku',
+            'gemini': 'google/gemini-2.0-flash-exp:free'
+        };
+        const finalModel = modelMap[requestedModel?.toLowerCase()] || 'google/gemini-2.0-flash-exp:free';
+        console.log(`[Elite Engine] Streaming from: ${finalModel}`);
+        // Use OpenRouter streaming
+        const stream = await openrouter_1.openRouterService.streamChat(messages, finalModel, { max_tokens: 8000 });
+        for await (const chunk of stream) {
+            if (chunk) {
+                res.write(`data: ${JSON.stringify({ reply: chunk })}\n\n`);
+            }
         }
-        messages.push({ role: 'user', content: promptContent });
-        // Use a robust multimodal model
-        const model = 'google/gemini-2.0-flash-exp:free';
-        const reply = await openrouter_1.openRouterService.chat(messages, model, { max_tokens: 2000 });
-        res.json({ reply });
+        res.write('data: [DONE]\n\n');
+        res.end();
     }
     catch (error) {
-        console.error('[API Error]:', error.message);
-        res.status(500).json({ reply: 'AI temporarily unavailable. Please try again.' });
+        console.error('[Elite Engine Error]:', error.message);
+        res.write(`data: ${JSON.stringify({ error: 'Generation interrupted.' })}\n\n`);
+        res.end();
     }
 });
 // 🚀 Start Server

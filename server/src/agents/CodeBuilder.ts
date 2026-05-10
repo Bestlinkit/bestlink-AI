@@ -61,8 +61,8 @@ export class CodeBuilder extends BaseAgent {
     let fullResponse = "";
     try {
       for await (const chunk of this.streamAsk(currentPrompt, model, attachments)) {
-        if (chunk.choices?.[0]?.delta?.content) {
-          fullResponse += chunk.choices[0].delta.content;
+        if (chunk) {
+          fullResponse += chunk;
           if (onProgress) {
             onProgress('GENERATING_FILES', { 
               message: `Generating codebase... (${fullResponse.length} chars)` 

@@ -37,7 +37,7 @@ class BaseAgent {
             { role: 'system', content: this.systemPrompt },
             { role: 'user', content: userContent.length > 1 ? userContent : prompt }
         ];
-        yield* openrouter_1.openRouterService.streamChatGenerator(messages, model);
+        yield* openrouter_1.openRouterService.streamChat(messages, model);
     }
 }
 exports.BaseAgent = BaseAgent;

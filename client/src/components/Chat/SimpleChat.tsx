@@ -77,11 +77,34 @@ export default function SimpleChat() {
         }),
       });
 
-      const data = await res.json();
-      if (data.reply) {
-        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      const contentType = res.headers.get("content-type");
+      let data;
+      
+      if (contentType && contentType.includes("application/json")) {
+        data = await res.json();
       } else {
-        throw new Error(data.error || "Failed to get response");
+        const rawText = await res.text();
+        console.warn("[SimpleChat] Received non-JSON response:", rawText);
+        // Fallback: Check if it's an SSE stream that we can extract data from
+        if (rawText.includes('data: ')) {
+          try {
+            const jsonStr = rawText.split('data: ')[1].split('\n')[0];
+            data = JSON.parse(jsonStr);
+          } catch (e) {
+            throw new Error("Invalid response format from server.");
+          }
+        } else {
+          throw new Error("Server returned non-JSON response.");
+        }
+      }
+
+      if (data?.reply) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      } else if (data?.data?.payload?.files) {
+        // Handle legacy pipeline data if it leaks through
+        setMessages(prev => [...prev, { role: 'assistant', content: "🚀 Project generated successfully. (Legacy format detected)" }]);
+      } else {
+        throw new Error(data?.error || "Failed to get response");
       }
     } catch (err: any) {
       console.error(err);
